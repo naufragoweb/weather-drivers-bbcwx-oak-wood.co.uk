@@ -13,7 +13,7 @@ flowchart TD
     F -->|Success| H[location BBC website]
     G -->|Success| I[_getAPIcurrent]
     I -->|Success| J[_getAPIforecasts]
-    J --> K[_emptyData]
+    J -->|Success| K[_emptyData]
     K -->|Success| L[_loadData]
     L -->|Success| M[displayMeta]
     L -->|Success| N[displayCurrent]
