@@ -6,6 +6,7 @@ Challenges and Solutions:
 🔍 API Context:
 
 The BBC Weather Service uses 3 complementary APIs:
+
     * Location API: Provides geonameID (essential for other APIs), city name, country and geographic coordinates
     * Current Conditions API: Real-time weather data
     * Forecasts API: Future and complementary data
@@ -28,7 +29,9 @@ The BBC Weather Service uses 3 complementary APIs:
           - Inconsistencies in rendering, mainly affecting the translation of out-of-sequence passages;
 
       ** User Experience:
+    
           - The emptyData → fetch → fill process created:
+    
               -- Noticeable "empty screen" windows;
               -- Flickering in the interface;
 
@@ -55,7 +58,9 @@ The BBC Weather Service uses 3 complementary APIs:
 👨‍💻 Lessons Learned
 
 *** Asynchronicity requires careful planning in dependency chains;
+
 *** Additional data must be processed before rendering;
+
 *** User experience can be improved with small adjustments to the flow.
 
 ----------------------------------------------------------------------------
