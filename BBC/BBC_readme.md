@@ -65,9 +65,7 @@ The BBC Weather Service uses 3 complementary APIs:
 
 ----------------------------------------------------------------------------
 
-Updates and fix:
-
-Start 2025-05-18
+Updates and fix: Start 2025-05-18
 
 * Script fetches data in JSON format;
 * Script returns 7 days of forecast (actually it returns 14, but the desklet has the limit set at 7, the current day + 6 days of forecast);
@@ -84,3 +82,10 @@ Start 2025-05-18
 * Add params function to choose URL options;
 
 ----------------------------------------------------------------------------
+
+Update: 2025-05-19
+
+* Code cleaning
+* Refactoring to wxbase.js patterns;
+* Naming functions, variables and expressions according to wxbase.js;
+* Cleaning up error log calls;
