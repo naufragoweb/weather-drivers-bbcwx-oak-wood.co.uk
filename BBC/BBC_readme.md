@@ -34,6 +34,7 @@ The BBC Weather Service uses 3 complementary APIs:
     
               -- Noticeable "empty screen" windows;
               -- Flickering in the interface;
+              
 
 💡 Implemented Solutions:
 
@@ -54,6 +55,8 @@ The BBC Weather Service uses 3 complementary APIs:
     * Result:
         ** Total reduction in blank screen time (between updates);
         ** Smooth transition between updates;
+        
+    4. Adjustment in the correct identification of forecast days by changing the _getDayName function.
 
 👨‍💻 Lessons Learned
 
@@ -93,7 +96,7 @@ Updates and fix: Start 2025-05-18
 
 * Add params function to choose URL options;
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 Update: 2025-05-19
 
@@ -113,5 +116,11 @@ Update: 2025-05-19
 
 * Added status confirmation in _load_data to confirm success of data assigned to this.data.meta
 
----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Update 2025-05-20
+
+* Adjustment in the correct identification of forecast days by changing the _getDayName function.
+
+--------------------------------------------------------------------------------
 
