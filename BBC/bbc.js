@@ -1,4 +1,4 @@
-// BBC Weather Driver JSON API
+// BBC Weather Driver JSON API (Refatorado)
 
 const UUID = 'bbcwx@oak-wood.co.uk';
 const DESKLET_DIR = imports.ui.deskletManager.deskletMeta[UUID].path;
@@ -46,22 +46,12 @@ var Driver = class Driver extends wxBase.Driver {
         // Initializes the metadata parts of this.data
         this.data.city = '';
         this.data.country = '';
-        // Ensures that wgs84 is an object
-        if (typeof this.data.wgs84 !== 'object' || this.data.wgs84 === null) {
-            this.data.wgs84 = {};
-        }
-        this.data.wgs84.lat = null;
-        this.data.wgs84.lon = null;
-
-        // Initializes the status object
-        if (typeof this.data.status !== 'object' || this.data.status === null) {
-            this.data.status = {};
-        }
+        this.data.wgs84 = new Object();
+        this.data.wgs84.lat = '';
+        this.data.wgs84.lon = '';
 
         // Initializes the current conditions (cc) object
-        if (typeof this.data.cc !== 'object' || this.data.cc === null) {
-            this.data.cc = {};
-        }
+        this.data.cc = new Object();
         this.data.cc.feelslike = '';
         this.data.cc.has_temp = false;
         this.data.cc.humidity = '';
@@ -74,7 +64,6 @@ var Driver = class Driver extends wxBase.Driver {
         this.data.cc.wind_direction = '';
         this.data.cc.wind_speed = '';
 
-        // Handle this.data.days carefully.
         // Constructs a new array and assigns it atomically.
         this.data.days = [];
         
@@ -100,6 +89,7 @@ var Driver = class Driver extends wxBase.Driver {
   async refreshData(deskletObj) {
 
     // reset the services object at the beginning of refreshData
+    this.data.status = {};
     this.data.status.cc = SERVICE_STATUS_INIT;
     this.data.status.forecast = SERVICE_STATUS_INIT;
     this.data.status.meta = SERVICE_STATUS_INIT;
@@ -284,9 +274,12 @@ var Driver = class Driver extends wxBase.Driver {
 
     const loc = this.latlon ? meta.response.results.results[0] : meta.response;
 
-    this.data.city = loc.name || '';
-    this.data.country = loc.country || '';
-    this.data.wgs84 = { lat: loc.latitude || '', lon: loc.longitude || '' };
+    this.data.city = loc.name ?? '';
+    this.data.country = loc.country ?? '';
+    this.data.wgs84.lat = loc.lat ?? '';
+    this.data.wgs84.lon = loc.lon ?? '';
+
+    this.data.status.meta = SERVICE_STATUS_OK;
     if (!this.data.city || !this.data.country) {
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Incomplete location metadata');
@@ -304,9 +297,9 @@ var Driver = class Driver extends wxBase.Driver {
       this.data.cc.wind_direction = obs.wind.windDirectionAbbreviation ?? '';
       this.data.cc.humidity = obs.humidityPercent ?? fobs.humidity ?? '';
       this.data.cc.pressure = obs.pressureMb ?? fobs.pressure ?? '';
-      this.data.cc.pressure_direction = _(obs.pressureDirection || fobs.pressureDirection || '');
-      this.data.cc.visibility = _(obs.visibility || fobs.visibility || '');
-      this.data.cc.weathertext = this._mapDescription(fobs.weatherTypeText || '');
+      this.data.cc.pressure_direction = _(obs.pressureDirection ?? fobs.pressureDirection ?? '');
+      this.data.cc.visibility = _(obs.visibility ?? fobs.visibility ?? '');
+      this.data.cc.weathertext = this._mapDescription(fobs.weatherTypeText ?? '');
       this.data.cc.icon = this._mapicon(String(fobs.weatherType ?? ''), isNight);
       this.data.cc.has_temp = this.data.cc.temperature !== '';
 
