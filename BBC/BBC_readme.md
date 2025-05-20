@@ -68,17 +68,29 @@ The BBC Weather Service uses 3 complementary APIs:
 Updates and fix: Start 2025-05-18
 
 * Script fetches data in JSON format;
+
 * Script returns 7 days of forecast (actually it returns 14, but the desklet has the limit set at 7, the current day + 6 days of forecast);
+
 * Script fetches data from 3 different APIs: Location, Observations and Forecasts;
+
 * Allows insertion of geonameID and geographic coordinates (example: -4.05,39.66);
+
 * Anticipated and synchronized fetching of APIs and parsing before assigning to objects;
+
 * Delay in cleaning declared objects...Now the script only cleans objects when the API data is already parsed and ready for replacement, reducing the delay in refreshing the data;
+
 * Adjustment of icons and weathertexts according to the data extracted from the APIs with numbering and nomenclature;
+
 * Adjustment of nomenclature according to the desklet translation;
+
 * Adjustment of the _emptyData function:
+
   ** Use the constant BBC_DRIVER_MAX_DAYS to ensure the array is always the correct size for BBC, regardless of the value of this.maxDays during the call to super() in the constructor.This ensures that the array is always the correct size, regardless of the original this.maxDays value in wxbase. This avoids the 'day is undefined' error when starting the script;
+  
 * Compatibility adjustments with wxbase.js (assigning functions similar to the base driver);
+
 * Creating a BBC logo for display: created in GIMP with Gill Sans fonts (the script is already adapted, just insert it into the icons/colorful folder);
+
 * Add params function to choose URL options;
 
 ----------------------------------------------------------------------------
@@ -86,6 +98,20 @@ Updates and fix: Start 2025-05-18
 Update: 2025-05-19
 
 * Code cleaning
+
 * Refactoring to wxbase.js patterns;
+
 * Naming functions, variables and expressions according to wxbase.js;
+
 * Cleaning up error log calls;
+
+* emptyData function setting:
+
+** Removing this.data.status and initializing in refreshData to create the object outside of emptyData;
+
+* Minor layout adjustments and adaptation to the wxbase.js standard;
+
+* Added status confirmation in _load_data to confirm success of data assigned to this.data.meta
+
+---------------------------------------------------------------------------
+
