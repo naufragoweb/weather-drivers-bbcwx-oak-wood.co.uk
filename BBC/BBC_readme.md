@@ -53,7 +53,7 @@ The BBC Weather Service uses 3 complementary APIs:
         ** emptyData moved to after new data is fetched;
 
     * Result:
-        ** Total reduction in blank screen time (between updates);
+        ** Total reduction in error screen time (between updates);
         ** Smooth transition between updates;
         
     4. Adjustment in the correct identification of forecast days by changing the _getDayName function.
