@@ -11,7 +11,7 @@ const SERVICE_STATUS_ERROR = wxBase.SERVICE_STATUS_ERROR;
 const SERVICE_STATUS_OK = wxBase.SERVICE_STATUS_OK;
 const SERVICE_STATUS_INIT = wxBase.SERVICE_STATUS_INIT;
 
-const OWMFREE_DRIVER_MAX_DAYS = 5; // Constant for the number of Meteoblue days
+const OWMFREE_DRIVER_MAX_DAYS = 5; // Constant for the number of OWMFree days
 
 Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
 
@@ -28,19 +28,19 @@ var Driver = class Driver extends wxBase.Driver {
 
     this.drivertype = 'OWMFree';
     this.maxDays = 5;
+    this.minTTL = 3600;
     this.linkText = 'openweathermap.org';
     this._baseURL = 'https://api.openweathermap.org/data/2.5/';
     this.linkURL = 'https://openweathermap.org/city/';
 
     this.linkIcon = {
         file: 'owmfree',
-        width: 80,
-        height: 36
+        width: 70,
+        height: 32
     };
 
     this.locationID = '';
     this.latlon = [];
-
 
     this.lang_map = {
       'ar': 'ar',   // Arabic
@@ -123,7 +123,7 @@ var Driver = class Driver extends wxBase.Driver {
     // Constructs a new array and assigns it atomically.
     this.data.days = [];
     
-    // Use the constant METEOBLUE_DRIVER_MAX_DAYS to ensure the array is always the correct size for BBC,
+    // Use the constant OWMFREE_DRIVER_MAX_DAYS to ensure the array is always the correct size for BBC,
     // regardless of the value of this.maxDays during the call to super() in the constructor.
     // This ensures that the array is always the correct size, regardless of the original this.maxDays value in wxbase.
     for (let i = 0; i < OWMFREE_DRIVER_MAX_DAYS; i++) {
@@ -142,6 +142,7 @@ var Driver = class Driver extends wxBase.Driver {
   }
       
   async refreshData(deskletObj) {
+
     try{
       // reset the services object at the beginning of refreshData
       this.data.status = {};
@@ -185,7 +186,6 @@ var Driver = class Driver extends wxBase.Driver {
       await this._parse_data(current, forecasts);
 
       this.linkURL = this.linkURL + this.locationID;
-      global.log('location URL: ' + this.locationID);
 
       // Display data in the desklet
       deskletObj.displayMeta();
@@ -353,7 +353,7 @@ var Driver = class Driver extends wxBase.Driver {
     
     //Forecast data
     try {
-      // DAY 0 (condições especiais - usa APENAS o primeiro bloco)
+      // DAY 0 (special conditions - uses ONLY the first block)
       this.data.days[0] = {
         day: this._getDayName(0), // "Mon", "Tue", etc.
         icon: this._mapicon(forecasts.list[0].weather[0].icon),
@@ -362,20 +362,20 @@ var Driver = class Driver extends wxBase.Driver {
         maximum_temperature: forecasts.list[0].main.temp_max,
         wind_speed: forecasts.list[0].wind.speed,
         wind_direction: this.compassDirection(forecasts.list[0].wind.deg),
-        pressure: forecasts.list[0].main.pressure,
+        pressure: forecasts.list[0].main.grnd_level,
         humidity: forecasts.list[0].main.humidity
       };
 
-      // DAYS 1-4 (agrupamento de blocos por dia)
+      // DAYS 1-4 (grouping of blocks by day)
       const dailyBlocks = {};
-      const today = new Date(forecasts.list[0].dt_txt).getDate(); // Data do primeiro bloco (day0)
+      const today = new Date(forecasts.list[0].dt_txt).getDate(); // Date of first block (day0)
 
-      // Agrupa blocos por dia (ignorando day0)
+      // Group blocks by day (ignoring day0)
       forecasts.list.forEach(block => {
         const blockDate = new Date(block.dt_txt).getDate();
         const dayDiff = blockDate - today;
         
-        if (dayDiff >= 1 && dayDiff <= 4) { // Dias 1 a 4 apenas
+        if (dayDiff >= 1 && dayDiff <= 4) { // Days 1 to 4 (only)
           if (!dailyBlocks[dayDiff]) {
             dailyBlocks[dayDiff] = [];
           }
@@ -383,10 +383,16 @@ var Driver = class Driver extends wxBase.Driver {
         }
       });
 
-      // Processa cada dia agrupado (1-4)
+      // Process each day grouped (1-4)
       for (let dayOffset = 1; dayOffset <= 4; dayOffset++) {
         const blocks = dailyBlocks[dayOffset];
         if (!blocks || blocks.length === 0) continue;
+
+        // Filters day blocks (9h-18h)
+      const dayBlocks = blocks.filter(block => {
+        const hour = new Date(block.dt_txt).getHours();
+        return hour >= 9 && hour <= 15; // <-- always next 3 hours
+      });
 
         this.data.days[dayOffset] = {
           day: this._getDayName(dayOffset),
@@ -402,31 +408,45 @@ var Driver = class Driver extends wxBase.Driver {
 
         const day = this.data.days[dayOffset];
         
-        // Bloco do meio-dia (12:00) para ícone/descrição
-        const middayBlock = blocks.find(b => 
-           new Date(b.dt_txt).getHours() === 12
-        ) || blocks[Math.floor(blocks.length / 2)]; // Fallback para bloco central
+        // Finds the most relevant condition (highest priority)
+        let dominantIcon = blocks.find(b => 
+           new Date(b.dt_txt).getHours() === 12) 
+           || blocks[Math.floor(blocks.length / 2)]; // Fallback midday block (12:00) for icon/description;
 
-        day.icon = this._mapicon(middayBlock.weather[0].icon);
-        day.weathertext = middayBlock.weather[0].description;
+        let maxPriority = -1;
 
-        // Agrega dados de todos os blocos do dia
+        dayBlocks.forEach(block => {
+          const currentIcon = block.weather[0].icon;
+          const currentPriority = this._getWeatherPriority(currentIcon);
+          if (currentPriority > maxPriority) {
+            maxPriority = currentPriority;
+            dominantIcon = currentIcon;
+          }
+        });
+
+        // Assigns icon and description
+        day.icon = this._mapicon(dominantIcon); // Returns the icon code (e.g. '12')
+        day.weathertext = dayBlocks.find(b => b.weather[0].icon === dominantIcon).weather[0].description;
+
+        
+
+        // Aggregates data from all blocks of the day
         let maxWindSpeed = 0;
         let maxWindDirection = '';
         
         blocks.forEach(block => {
-          // Temperaturas
+          // Temperatures
           day.minimum_temperature = Math.min(day.minimum_temperature, block.main.temp_min);
           day.maximum_temperature = Math.max(day.maximum_temperature, block.main.temp_max);
           
-          // Vento (direção do vento mais forte)
+          // Wind (direction of the strongest wind)
           if (block.wind.speed > maxWindSpeed) {
             maxWindSpeed = block.wind.speed;
             maxWindDirection = this.compassDirection(block.wind.deg);
           }
           
-          // Pressão e umidade (valores máximos)
-          day.pressure = Math.max(day.pressure, block.main.pressure);
+          // Pressure and humidity (maximum values)
+          day.pressure = Math.max(day.pressure, block.main.grnd_level);
           day.humidity = Math.max(day.humidity, block.main.humidity);
         });
 
@@ -451,16 +471,31 @@ var Driver = class Driver extends wxBase.Driver {
   }
 }
 
+_getWeatherPriority(iconCode) {
+  const weatherScale = {
+    '01d': 2,     // Clear Sky
+    '02d': 1,     // Few Clouds
+    '03d': 3,     // Scattered clouds
+    '04d': 4,     // Broken clouds
+    '09d': 5,     // Shower rain
+    '10d': 6,     // Rain
+    '11d': 7,     // Thunderstorm
+    '13d': 8,     // Snow
+    '50d': 0,     // Mist
+  };
+  return weatherScale[iconCode] ?? 'na'; // Fallback: 'na' icon
+}
+
   _mapicon(icon) {
     const icons = {
       '01d': '32',  // clear sky day
       '01n': '31',  // clear sky night
       '02d': '34',  // few clouds day
       '02n': '33',  // few clouds night
-      '03d': '26',  // scattered clouds
-      '03n': '26',  // scattered clouds
-      '04d': '28',  // broken clouds day
-      '04n': '27',  // broken clouds night
+      '03d': '28',  // scattered clouds
+      '03n': '27',  // scattered clouds
+      '04d': '26',  // broken clouds day
+      '04n': '26',  // broken clouds night
       '09d': '39',  // shower rain day
       '09n': '45',  // shower rain night
       '10d': '12',  // rain day
