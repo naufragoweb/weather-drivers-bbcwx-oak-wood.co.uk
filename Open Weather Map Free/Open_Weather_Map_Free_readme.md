@@ -43,7 +43,26 @@ Problems found:
         
 --------------------------------------------------------------------------------
 
-Update 2025-05-21
+Update: 2025-05-22
+
+* Modification of the display of the weather condition of the forecast for future days:
+
+	* Determine the dominant condition of the day according to relevance (getWeatherPriority function);
+	
+	* Fallback to the noon icon in case of failure to determine the priority icon;
+	
+* Translation of script notes into English;
+
+* Adjust icon dimensions;
+
+* Adjustment in minimum request time for data updates (this.minTTL);
+
+* Small adjustments;
+
+--------------------------------------------------------------------------------
+
+
+Update 2025-05-21 - Initial logs:
 
 * Refactored code;
 
@@ -84,15 +103,5 @@ Update 2025-05-21
 		* Uses _getDayName() and compassDirection() as in current implementations;
 		
 --------------------------------------------------------------------------------
-
-Update: 2025-05-22
-
-* Modification of the display of the weather condition of the forecast for future days:
-
-	* Determine the dominant condition of the day according to relevance (getWeatherPriority function);
-	
-	* Fallback to the noon icon in case of failure to determine the priority icon;
-	
-* Translation of script notes into English;
 
 
