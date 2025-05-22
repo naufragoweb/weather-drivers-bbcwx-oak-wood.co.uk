@@ -26,14 +26,19 @@ Problems found:
   
   3- Flow Control with Async/Await:
         ** Benefits:
-              -- Ensures correct order of execution;
-              -- Maintains compatibility with original desklet.js and wxbase.js
+        
+              * Ensures correct order of execution;
+              
+              * Maintains compatibility with original desklet.js and wxbase.js
               
   4- Update Cycle Optimization
+  
         ** emptyData moved to after new data is fetched;
 
     * Result:
+    
         ** Total reduction in blank screen time (between updates);
+        
         ** Smooth transition between updates;
         
 --------------------------------------------------------------------------------
@@ -79,3 +84,15 @@ Update 2025-05-21
 		* Uses _getDayName() and compassDirection() as in current implementations;
 		
 --------------------------------------------------------------------------------
+
+Update: 2025-05-22
+
+* Modification of the display of the weather condition of the forecast for future days:
+
+	* Determine the dominant condition of the day according to relevance (getWeatherPriority function);
+	
+	* Fallback to the noon icon in case of failure to determine the priority icon;
+	
+* Translation of script notes into English;
+
+
