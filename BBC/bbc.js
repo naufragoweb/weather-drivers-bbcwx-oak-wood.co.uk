@@ -1,4 +1,4 @@
-// BBC Weather Driver JSON API (Refatorado)
+// BBC Weather Driver JSON API
 
 const UUID = 'bbcwx@oak-wood.co.uk';
 const DESKLET_DIR = imports.ui.deskletManager.deskletMeta[UUID].path;
@@ -211,7 +211,7 @@ var Driver = class Driver extends wxBase.Driver {
     } catch (err) {
       global.logError(`BBC Driver _load_meta error: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Error retrieving or parsing location metadata: %s').format(error.message);
+      this.data.status.lasterror = _('Error retrieving or parsing location metadata: %s').format(err.message);
       return false;
     }
   }
@@ -336,9 +336,10 @@ var Driver = class Driver extends wxBase.Driver {
           const day = this.data.days[i];
           const forecastDay = forecast.forecasts[i];
           const sum = forecastDay.summary.report;
-          const det = forecastDay.detailed.reports?.[0];
-          
-          day.day = this._getDayName((new Date(forecast.issueDate).getDay() + i) % 7);
+          const det = forecastDay.detailed.reports[0];
+
+          let localDate = forecast.forecasts[0].summary.report.localDate || forecast.forecasts[0].detailed.reports[0].localDate;
+          day.day = this._getDayName((new Date(localDate).getUTCDay() + i) % 7);
           
           day.maximum_temperature = sum.maxTempC;
           day.minimum_temperature = sum.minTempC;
@@ -373,7 +374,7 @@ _getDayName(i) {
     if (i >= 0 && i < days.length) {
       return days[i]; // Use 'i' directly as index.
     }
-    global.log(`Open-Meteo: _getDayName received an invalid day index: ${i}`);
+    global.log(`BBC Driver: _getDayName received an invalid day index: ${i}`);
     return ""; // Return to an unexpected index.
   }
 
@@ -427,8 +428,6 @@ _getDayName(i) {
     };
 
     let iconCode = 'na';
-
-    const iconKey = icon ? icon.toString() : '';
 
     if (icon && (typeof icons[icon] !== 'undefined')) {
       iconCode = icons[icon];
