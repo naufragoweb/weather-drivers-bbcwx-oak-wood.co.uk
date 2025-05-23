@@ -21,6 +21,7 @@ function _(str) {
 
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID) {
+    
     super(stationID);
     this.maxDays = 7;
     this.capabilities.meta.region = false;
@@ -155,38 +156,55 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
-  _getWeatherAsync(url, deskletObj) {
+  _params() {
+    return {
+      'la': this.latlon[0],
+      'lo': this.latlon[1],
+      'format': 'json'
+    };
+  }
+
+  _params0() {
+    return {
+      'format': 'json'
+    };
+  }
+
+  _getWeatherAsync(url, params = null) {
     return new Promise((resolve, reject) => {
       this._getWeather(url, (weather) => {
         if (weather) {
           resolve(weather);
         } else {
-          // Assuming _getWeather calls callback with null/undefined on failure
-          // Or you might need to check for a specific error indicator from _getWeather
-          reject(e);
-          this._showError(deskletObj, _('Failed to retrieve data from %s').format(url));
+          const error = new Error(`Failed to retrieve data from ${url}. Response was empty or indicated failure.`);
+          reject(error);
         }
-      });
+      }, params); 
     });
   }
 
   async _load_meta() {
-    this.localURL = this.latlon
-      ? `${this.locationURL}?la=${this.latlon[0]}&lo=${this.latlon[1]}&format=json`
-      : `${this.locationURL}/${this.locationID}?format=json`;
+    let params;
+    if (this.latlon) {
+      params = this._params();
+      this.localURL = `${this.locationURL}`;
+    } else {
+      params = this._params0();
+      this.localURL = `${this.locationURL}/${this.locationID}`;
+    }
     try {
-      const weather = await this._getWeatherAsync(this.localURL);
+      const weather = await this._getWeatherAsync(this.localURL, params);
       const json = JSON.parse(weather);
       // Basic check for expected structure
       if (this.latlon && (!json.response || !json.response.results || !json.response.results.results || json.response.results.results.length === 0)) {
           this.data.status.meta = SERVICE_STATUS_ERROR;
           this.data.status.lasterror = _('Invalid location metadata response for lat/lon');
-          return null;
+          return false;
       }
       if (this.locationID && (!json.response || !json.response.name)) {
           this.data.status.meta = SERVICE_STATUS_ERROR;
           this.data.status.lasterror = _('Invalid location metadata response for ID');
-          return null;
+          return false;
       }
       this.data.status.meta = SERVICE_STATUS_OK;
       return json;
@@ -194,7 +212,7 @@ var Driver = class Driver extends wxBase.Driver {
       global.logError(`BBC Driver _load_meta error: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Error retrieving or parsing location metadata: %s').format(error.message);
-      return null;
+      return false;
     }
   }
 
@@ -202,7 +220,7 @@ var Driver = class Driver extends wxBase.Driver {
     if (!this.locationID) {
       this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Location ID not available');
-      return null;
+      return false;
     }
     let currentURL = `${this.baseURL}observation/${this.locationID}`;
     try {
@@ -215,7 +233,7 @@ var Driver = class Driver extends wxBase.Driver {
         if (!json.observations || json.observations.length === 0) {
           this.data.status.cc = SERVICE_STATUS_ERROR;
           this.data.status.lasterror = _('Invalid current conditions response');
-          return null;
+          return false;
         }
       this.data.status.cc = SERVICE_STATUS_OK;
       return json;
@@ -224,7 +242,7 @@ var Driver = class Driver extends wxBase.Driver {
       global.logError(`BBC Driver _load_current error: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Error retrieving current data: %s').format(err.message);
-      return null;
+      return false;
     }
   }
 
@@ -232,7 +250,7 @@ var Driver = class Driver extends wxBase.Driver {
     if (!this.locationID) {
       this.data.status.forecast = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Location ID not available');
-      return null;
+      return false;
     }
     let daysURL = `${this.baseURL}forecast/aggregated/${this.locationID}`;
     try {
@@ -245,7 +263,7 @@ var Driver = class Driver extends wxBase.Driver {
         if (!json.forecasts || json.forecasts.length === 0) {
           this.data.status.forecast = SERVICE_STATUS_ERROR;
           this.data.status.lasterror = _('Invalid forecast response');
-          return null;
+          return false;
         }
         this.data.status.forecast = SERVICE_STATUS_OK;
         return json;
@@ -254,96 +272,110 @@ var Driver = class Driver extends wxBase.Driver {
       global.logError(`BBC Driver _load_forecast error: ${err.message}`);
       this.data.status.forecast = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Error retrieving forecast data: %s').format(err.message);
-      return null;
+      return false;
     }
   }
 
   async _parse_location(meta) {
     const result = meta.response.results.results[0];
-    if (!result.id) {
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing location data');
-      return false;
-    }
+
     this.locationID = result.id;
+
     this.data.status.meta = SERVICE_STATUS_OK;
     return true;
   }
 
   async _parse_data(meta, current, forecast) {
-
-    const loc = this.latlon ? meta.response.results.results[0] : meta.response;
-
-    this.data.city = loc.name ?? '';
-    this.data.country = loc.country ?? '';
-    this.data.wgs84.lat = loc.lat ?? '';
-    this.data.wgs84.lon = loc.lon ?? '';
-
-    this.data.status.meta = SERVICE_STATUS_OK;
-    if (!this.data.city || !this.data.country) {
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Incomplete location metadata');
-    }
-
-    if (current.observations.length) {
-
-      const obs = current.observations[0];
-      const fobs = forecast.forecasts[0].detailed.reports[0];
-      const isNight = forecast.isNight ?? false;
-
-      this.data.cc.temperature = obs.temperature.C ?? '';
-      this.data.cc.feelslike = fobs.feelsLikeTemperatureC ?? '';
-      this.data.cc.wind_speed = obs.wind.windSpeedKph ?? '';
-      this.data.cc.wind_direction = obs.wind.windDirectionAbbreviation ?? '';
-      this.data.cc.humidity = obs.humidityPercent ?? fobs.humidity ?? '';
-      this.data.cc.pressure = obs.pressureMb ?? fobs.pressure ?? '';
-      this.data.cc.pressure_direction = _(obs.pressureDirection ?? fobs.pressureDirection ?? '');
-      this.data.cc.visibility = _(obs.visibility ?? fobs.visibility ?? '');
-      this.data.cc.weathertext = this._mapDescription(fobs.weatherTypeText ?? '');
-      this.data.cc.icon = this._mapicon(String(fobs.weatherType ?? ''), isNight);
-      this.data.cc.has_temp = this.data.cc.temperature !== '';
-
-      this.data.status.cc = SERVICE_STATUS_OK;
-    } else {
-      this.data.status.cc = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('No current conditions data');
-    }
-    
-    if (forecast?.forecasts?.length) {
-      const isNight = forecast.isNight ?? false;
-
-      for (let i = 0; i < this.maxDays; i++) {
-        const day = this.data.days[i];
-        const forecastDay = forecast.forecasts[i] || {};
-        const sum = forecastDay.summary.report || {};
-        const det = forecastDay.detailed.reports?.[0] || {};
-
-        day.day = this._getDayName(i);
-        day.maximum_temperature = sum.maxTempC ?? '';
-        day.minimum_temperature = sum.minTempC ?? '';
-        day.weathertext = this._mapDescription(sum.weatherTypeText || '');
-        day.wind_direction = sum.windDirection ?? '';
-        day.wind_speed = sum.windSpeedKph ?? '';
-        day.icon = this._mapicon(String(sum.weatherType ?? ''), i === 0 ? isNight : false);
-        day.humidity = det.humidity ?? '';
-        day.pressure = det.pressure ?? '';
+    try{ 
+      let loc;
+      if (this.latlon) {
+        loc = meta.response.results.results[0];
+      } else {
+        loc = meta.response;  
       }
-      this.data.status.forecast = SERVICE_STATUS_OK;
-    } else {
+
+      this.data.city = loc.name;
+      this.data.country = loc.country ;
+      this.data.wgs84.lat = loc.lat;
+      this.data.wgs84.lon = loc.lon;
+
+      this.data.status.meta = SERVICE_STATUS_OK;
+      if (!this.data.city || !this.data.country) {
+        this.data.status.meta = SERVICE_STATUS_ERROR;
+        this.data.status.lasterror = _('Incomplete location metadata');
+      }
+
+      if (current.observations.length) {
+
+        const obs = current.observations[0];
+        const fobs = forecast.forecasts[0].detailed.reports[0];
+        const isNight = forecast.isNight ===true;
+
+        this.data.cc.temperature = obs.temperature.C;
+        this.data.cc.feelslike = fobs.feelsLikeTemperatureC;
+        this.data.cc.wind_speed = obs.wind.windSpeedKph;
+        this.data.cc.wind_direction = obs.wind.windDirectionAbbreviation;
+        this.data.cc.humidity = obs.humidityPercent || fobs.humidity;
+        this.data.cc.pressure = obs.pressureMb || fobs.pressure;
+        this.data.cc.pressure_direction = _(obs.pressureDirection || fobs.pressureDirection);
+        this.data.cc.visibility = _(obs.visibility || fobs.visibility);
+        this.data.cc.weathertext = this._mapDescription(fobs.weatherTypeText);
+        this.data.cc.icon = this._mapicon(String(fobs.weatherType), isNight);
+        this.data.cc.has_temp = true;
+
+        this.data.status.cc = SERVICE_STATUS_OK;
+      } else {
+        this.data.status.cc = SERVICE_STATUS_ERROR;
+        this.data.status.lasterror = _('No current conditions data');
+      }
+      
+      if (forecast.forecasts.length) {
+        const isNight = forecast.isNight === true;
+
+        for (let i = 0; i < this.maxDays; i++) {
+          const day = this.data.days[i];
+          const forecastDay = forecast.forecasts[i];
+          const sum = forecastDay.summary.report;
+          const det = forecastDay.detailed.reports?.[0];
+          
+          day.day = this._getDayName((new Date(forecast.issueDate).getDay() + i) % 7);
+          
+          day.maximum_temperature = sum.maxTempC;
+          day.minimum_temperature = sum.minTempC;
+          day.weathertext = this._mapDescription(sum.weatherTypeText);
+          day.wind_direction = sum.windDirection;
+          day.wind_speed = sum.windSpeedKph;
+          day.icon = this._mapicon(String(sum.weatherType), i === 0 ? isNight : false);
+          day.humidity = det.humidity;
+          day.pressure = det.pressure;
+        }
+        this.data.status.forecast = SERVICE_STATUS_OK;
+      } else {
+        this.data.status.forecast = SERVICE_STATUS_ERROR;
+        this.data.status.lasterror = _('No forecast data');
+      }
+      return true;
+    } catch (err) {
+      global.logError(`BBC Driver _parse_data error: ${err.message}`);
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.forecast = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('No forecast data');
+      this.data.status.lasterror = _('Error parsing data: %s').format(err.message);
+      return false;
     }
   }
 
-_getDayName(index) {
-  // Use the abbreviations that correspond to the keys in desklet.js's this.daynames
-  const dayNamesAbbr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const today = new Date();
-  const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
-  const dayIndex = (currentDay + index) % 7;
-  return dayNamesAbbr[dayIndex]; // Returns the day abbreviation
-}
-
+_getDayName(i) { 
+    if (i == 7) {
+      i = 0; // Converts Sunday (7) from Glib to Sunday (0) from JS.
+    }
+    let days = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ];
+    if (i >= 0 && i < days.length) {
+      return days[i]; // Use 'i' directly as index.
+    }
+    global.log(`Open-Meteo: _getDayName received an invalid day index: ${i}`);
+    return ""; // Return to an unexpected index.
+  }
 
   // Maps BBC weather type codes to icon names
   _mapicon(icon, isNight) {
