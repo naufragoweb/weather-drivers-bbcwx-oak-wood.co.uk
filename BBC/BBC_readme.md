@@ -66,7 +66,45 @@ The BBC Weather Service uses 3 complementary APIs:
 
 *** User experience can be improved with small adjustments to the flow.
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Update 2025-05-22
+
+* Modified the _getDayName function so that the days of the week are calculated from the local date in issueDate in the API;
+
+* Removed Nullish operators from the script to simplify and adapt to the wxbase.js standard;
+
+* Added "params" function for incorporating parameters into URL by wxbase.js;
+
+* minor adjustments, code cleanup;
+
+--------------------------------------------------------------------------------
+
+Update 2025-05-20
+
+* Adjustment in the correct identification of forecast days by changing the _getDayName function.
+
+--------------------------------------------------------------------------------
+
+Update: 2025-05-19
+
+* Code cleaning
+
+* Refactoring to wxbase.js patterns;
+
+* Naming functions, variables and expressions according to wxbase.js;
+
+* Cleaning up error log calls;
+
+* emptyData function setting:
+
+** Removing this.data.status and initializing in refreshData to create the object outside of emptyData;
+
+* Minor layout adjustments and adaptation to the wxbase.js standard;
+
+* Added status confirmation in _load_data to confirm success of data assigned to this.data.meta
+
+--------------------------------------------------------------------------------
 
 Updates and fix: Start 2025-05-18
 
@@ -98,29 +136,6 @@ Updates and fix: Start 2025-05-18
 
 --------------------------------------------------------------------------------
 
-Update: 2025-05-19
 
-* Code cleaning
 
-* Refactoring to wxbase.js patterns;
-
-* Naming functions, variables and expressions according to wxbase.js;
-
-* Cleaning up error log calls;
-
-* emptyData function setting:
-
-** Removing this.data.status and initializing in refreshData to create the object outside of emptyData;
-
-* Minor layout adjustments and adaptation to the wxbase.js standard;
-
-* Added status confirmation in _load_data to confirm success of data assigned to this.data.meta
-
---------------------------------------------------------------------------------
-
-Update 2025-05-20
-
-* Adjustment in the correct identification of forecast days by changing the _getDayName function.
-
---------------------------------------------------------------------------------
 
