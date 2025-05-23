@@ -67,6 +67,13 @@ The BBC Weather Service uses 3 complementary APIs:
 *** User experience can be improved with small adjustments to the flow.
 
 --------------------------------------------------------------------------------
+Update 2025-05-23
+
+* New modification to the expression of the day.day object: changes the date locale from "day0" to "localDate" with fallback to "detailed" if "summary" fails.
+
+* Minor adjustments and code cleanup
+
+--------------------------------------------------------------------------------
 
 Update 2025-05-22
 
