@@ -528,6 +528,15 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   } 
 
+  _getDayName(index) {
+    // Use the abbreviations that correspond to the keys in desklet.js's this.daynames
+    const dayNamesAbbr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const dayIndex = (currentDay + index) % 7;
+    return dayNamesAbbr[dayIndex]; // Returns the day abbreviation
+  }
+
   mapicon(icon, isDaytime) {
     
     const icons = {
