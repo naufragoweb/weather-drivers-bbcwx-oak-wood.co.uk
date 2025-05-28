@@ -368,12 +368,18 @@ var Driver = class Driver extends wxBase.Driver {
 
       // DAYS 1-4 (grouping of blocks by day)
       const dailyBlocks = {};
-      const today = new Date(forecasts.list[0].dt_txt).getDate(); // Date of first block (day0)
+      // const today = new Date(forecasts.list[0].dt_txt).getDate(); // Old: Date of first block (day0)
+      const day0Date = new Date(forecasts.list[0].dt_txt);
+      // Get the start of day 0 in UTC milliseconds to avoid timezone issues with just getDate()
+      const day0StartTimestamp = new Date(Date.UTC(day0Date.getUTCFullYear(), day0Date.getUTCMonth(), day0Date.getUTCDate())).getTime();
 
       // Group blocks by day (ignoring day0)
       forecasts.list.forEach(block => {
-        const blockDate = new Date(block.dt_txt).getDate();
-        const dayDiff = blockDate - today;
+        // const blockDate = new Date(block.dt_txt).getDate(); // Old
+        // const dayDiff = blockDate - today; // Old: Problematic across month boundaries
+        const blockFullDate = new Date(block.dt_txt);
+        const blockStartTimestamp = new Date(Date.UTC(blockFullDate.getUTCFullYear(), blockFullDate.getUTCMonth(), blockFullDate.getUTCDate())).getTime();
+        const dayDiff = Math.round((blockStartTimestamp - day0StartTimestamp) / (1000 * 60 * 60 * 24));
         
         if (dayDiff >= 1 && dayDiff <= 4) { // Days 1 to 4 (only)
           if (!dailyBlocks[dayDiff]) {
@@ -411,7 +417,7 @@ var Driver = class Driver extends wxBase.Driver {
         // Finds the most relevant condition (highest priority)
         let dominantIcon = blocks.find(b => 
            new Date(b.dt_txt).getHours() === 12) 
-           || blocks[Math.floor(blocks.length / 2)]; // Fallback midday block (12:00) for icon/description;
+           || blocks[Math.floor(blocks.length / 2)]; // Fallback noon icon (12:00) for icon/description;
 
         let maxPriority = -1;
 
@@ -470,6 +476,15 @@ var Driver = class Driver extends wxBase.Driver {
     return false;
   }
 }
+
+ _getDayName(index) {
+    // Use the abbreviations that correspond to the keys in desklet.js's this.daynames
+    const dayNamesAbbr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const dayIndex = (currentDay + index) % 7;
+    return dayNamesAbbr[dayIndex]; // Returns the day abbreviation
+  }
 
 _getWeatherPriority(iconCode) {
   const weatherScale = {
