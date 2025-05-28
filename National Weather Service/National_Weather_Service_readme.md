@@ -54,6 +54,12 @@ Another characteristic is the total lack of a standard in data distribution. Dep
         
 --------------------------------------------------------------------------------
 
+Update 2025-05-28
+
+* Adjustment in the _getDayName function for correct display of the days of the week of the forecasts.
+
+--------------------------------------------------------------------------------
+
 New driver (star changelogs)
 
 * Insert 5 APIs to extract data;
