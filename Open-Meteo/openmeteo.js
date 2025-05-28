@@ -13,10 +13,10 @@ const SERVICE_STATUS_INIT = wxBase.SERVICE_STATUS_INIT;
 
 const OPENMETEO_DRIVER_MAX_DAYS = 7; // Constant for the number of Open-Meteo days
 
-Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
+//Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
 
 function _(str) {
-  return str ? Gettext.dgettext(UUID, str) || Gettext.dgettext('cinnamon', str) || str : '';
+  return Gettext.dgettext(UUID, str);
 }
 
 var Driver = class Driver extends wxBase.Driver {
@@ -164,7 +164,16 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
-  _getWeatherAsync(url, params = null) {
+  async _getWeatherAsync(url, params = null) {
+    // Apply delay ONLY if it is the geocode API (one requisition per second)
+    if (url.includes('geocode.xyz')) {
+        const now = Date.now();
+        if (now - this._lastGeocodeCall < 1000) {
+            await new Promise(resolve => setTimeout(resolve, 1000 - (now - this._lastGeocodeCall)));
+        }
+        this._lastGeocodeCall = now;
+    }
+    // Call getWeather
     return new Promise((resolve, reject) => {
       this._getWeather(url, (weather) => {
         if (weather) {
@@ -206,12 +215,12 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async _load_meta() {
+
     let params = this._params0();
     let metaURL = `${this._locationURL}${this.latitude},${this.longitude}`
     try {
       // Use the new async helper
       const weather = await this._getWeatherAsync(metaURL, params);
-
       if (weather) {
         const json = JSON.parse(weather);
         // Basic check for expected structure
@@ -225,7 +234,7 @@ var Driver = class Driver extends wxBase.Driver {
       }
     } catch (err) {
       global.logError(`Open-Meteo Driver: _load_meta error: ${err.message}`);
-      this.data.status.cc = SERVICE_STATUS_ERROR;
+      this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Error retrieving current data: %s').format(err.message);
       return null;
     }
