@@ -40,6 +40,13 @@ Refatored Open-Meteo Driver
 
 --------------------------------------------------------------------------------
 
+Update 2025-05-27
+
+* Insert time delimiter for calls to geocode.xyz API (only allows one call per minute)
+
+--------------------------------------------------------------------------------
+
+
 Update 2025-05-22 - Start new script
 
 * Add new API to location data;
