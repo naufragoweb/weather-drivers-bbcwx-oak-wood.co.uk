@@ -261,14 +261,17 @@ var Driver = class Driver extends wxBase.Driver {
 
       if (forecast.forecasts.length) {
         const isNight = forecast.isNight === true;
+        const firstForecastDayReport = forecast.forecasts[0].summary.report;
+        const firstForecastDayDetailed = forecast.forecasts[0].detailed.reports[0];
+        const baseLocalDateString = firstForecastDayReport.localDate || firstForecastDayDetailed.localDate;
+        const baseDayOfWeek = new Date(baseLocalDateString).getUTCDay();
         
         forecast.forecasts.slice(0, this.maxDays).forEach((dayData, i) => {
           const sum = dayData.summary.report;
           const det = dayData.detailed.reports[0];
-          const localDate = sum.localDate || det.localDate;
           
           Object.assign(this.data.days[i], {
-            day: this._getDayName((new Date(localDate).getUTCDay() + i) % 7),
+            day: this._getDayName((baseDayOfWeek + i) % 7),
             maximum_temperature: sum.maxTempC,
             minimum_temperature: sum.minTempC,
             weathertext: this._mapDescription(sum.weatherTypeText),
