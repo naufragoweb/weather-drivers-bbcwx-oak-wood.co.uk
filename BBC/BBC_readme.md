@@ -159,6 +159,8 @@ I will detail all the changes I made to make the code simpler and more compact, 
 
 All these changes kept exactly the same same original functionality, but resulted in approximately 30% smaller code that is much easier to maintain and understand.
 
+11. Fixed name of days.
+
 --------------------------------------------------------------------------------
 
 Update 2025-05-23
