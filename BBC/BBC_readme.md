@@ -1,6 +1,6 @@
 **Implementing BBC Weather Driver:**
 
-![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images(for%20use%20in%20readme.md/bbcx1.png)
+![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx1.png)
 
 Challenges and Solutions:
 
@@ -75,17 +75,17 @@ I will detail all the changes I made to make the code simpler and more compact, 
 
 * Consolidation of constants: I grouped all the constants at the beginning of the file for better visibility:
 
-image 1
+![Consolidation of constants](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image1.png)
 
 * Centralized mappings: I created constant objects for icon and text mappings:
 
-image 2
+![Centralized mappings](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image2.png)
 
 2. Simplifying Methods
 
 * _emptyData(): I replaced the manual initialization with a more compact structure:
 
-image 3
+![emptyData](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image3.png)
 
 * refreshData():
 
@@ -97,31 +97,31 @@ image 3
 
 * _getWeatherAsync(): Made more concise:
 
-image 4
+![getWeatherAsync](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image4.png)
 
 * _mapIcon() and _mapDescription(): Simplified using mapping objects:
 
-image 6
+![Mapping Objects](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image5.png)
 
 4. Simplified Status Handling
 
 * I've consolidated status updates into more straightforward operations:
 
-image 7
+![Status Handling](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image6.png)
 
 5. ES6+ (ECMAScript 6) Syntax Improvements
 
 * Destructuring assignment:
 
-image 8
+![Destructuring assignment](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image7.png)
 
-* Ternary operator:
+* Ternary operators:
 
-image 9
+![Ternary operator](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image8.png)
 
 * Optional chaining:
 
-image 10
+![Chaining](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image9.png)
 
 6. Reduced Repetitive Code
 
