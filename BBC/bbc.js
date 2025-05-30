@@ -1,4 +1,5 @@
 // BBC Weather Driver JSON API - Refactored Version
+// Created using ECMAScript 6 standart
 
 const UUID = 'bbcwx@oak-wood.co.uk';
 const DESKLET_DIR = imports.ui.deskletManager.deskletMeta[UUID].path;
@@ -95,8 +96,15 @@ var Driver = class Driver extends wxBase.Driver {
       ]);    
 
       this.linkURL = `https://www.bbc.com/weather/${this.locationID}`;
+
       this._emptyData();
-      await this._parseData(meta, current, forecast, deskletObj);
+
+      // Data process
+      await Promise.all([
+        this._parseMetaData(meta),
+        this._parseCurrentData(current, forecast),
+        this._parseForecastData(forecast),
+      ]);
 
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
@@ -152,8 +160,7 @@ var Driver = class Driver extends wxBase.Driver {
           lasterror: _('Invalid location metadata response') 
         };
         return false;
-      }
-      
+      } 
       this.data.status.meta = SERVICE_STATUS_OK;
       return json;
     } catch (err) {
@@ -221,22 +228,26 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
-  async _parseData(meta, current, forecast, deskletObj) {
-    try {
-      const loc = this.latlon ? meta.response.results.results[0] : meta.response;
-      
+  async _parseMetaData(meta) {
+    try{
+      const loc = this.latlon ? meta.response.results.results[0] : meta.response;    
       Object.assign(this.data, {
         city: loc.name,
         country: loc.country,
         wgs84: { lat: loc.lat, lon: loc.lon },
-        status: { meta: loc.name && loc.country ? SERVICE_STATUS_OK : {
-          meta: SERVICE_STATUS_ERROR,
-          lasterror: _('Incomplete location metadata')
-        }}
-      });
+      })
+      this.data.status.meta = SERVICE_STATUS_OK;
+    } catch (err) {
+      global.logError(`Error parsing meta data: ${err.message}`);
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Error processing meta data');
+    }
+    return true;
+  }
 
-      if (current.observations.length) {
-        const obs = current.observations[0];
+  async _parseCurrentData(current, forecast) {
+    try {
+      const obs = current.observations[0];
         const fobs = forecast.forecasts[0].detailed.reports[0];
         const isNight = forecast.isNight === true;
         
@@ -253,13 +264,16 @@ var Driver = class Driver extends wxBase.Driver {
           icon: this._mapIcon(String(fobs.weatherType), isNight),
           has_temp: true
         });
-        this.data.status.cc = SERVICE_STATUS_OK;
-      } else {
-        this.data.status.cc = SERVICE_STATUS_ERROR;
-        this.data.status.lasterror = _('No current conditions data');
-      }
+      this.data.status.cc = SERVICE_STATUS_OK;
+    } catch (err) {
+      this.data.status.cc = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Error processing current data: %s').format(err.message);
+    }
+    return true;
+  } 
 
-      if (forecast.forecasts.length) {
+  async _parseForecastData(forecast) {
+    try {
         const isNight = forecast.isNight === true;
         const firstForecastDayReport = forecast.forecasts[0].summary.report;
         const firstForecastDayDetailed = forecast.forecasts[0].detailed.reports[0];
@@ -282,21 +296,12 @@ var Driver = class Driver extends wxBase.Driver {
             pressure: det.pressure
           });
         });
-        this.data.status.forecast = SERVICE_STATUS_OK;
-      } else {
-        this.data.status.forecast = SERVICE_STATUS_ERROR;
-        this.data.status.lasterror = _('No forecast data');
-      }
-      return true;
+      this.data.status.forecast = SERVICE_STATUS_OK;
     } catch (err) {
-      this.data.status = {
-        meta: SERVICE_STATUS_ERROR,
-        cc: SERVICE_STATUS_ERROR,
-        forecast: SERVICE_STATUS_ERROR,
-        lasterror: _('Error parsing data: %s').format(err.message)
-      };
-      return false;
+      this.data.status.forecast = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Error processing forecast data: %s').format(err.message);
     }
+    return true;
   }
 
   _getDayName(i) {
