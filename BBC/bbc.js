@@ -14,28 +14,6 @@ const MAX_DAYS = 7;
 Gettext.bindtextdomain(UUID, `${GLib.get_home_dir()}/.local/share/locale`);
 const _ = str => str ? Gettext.dgettext(UUID, str) || Gettext.dgettext('cinnamon', str) || str : '';
 
-const iconMappings = {
-  day: {
-    '1': '32', '2': '30', '3': '30', '4': '23', '5': '20', '6': '20', '7': '26', '8': '26d',
-    '10': '11', '11': '09', '12': '11', '14': '12', '15': '12', '17': '18', '18': '18',
-    '20': '18', '21': '18', '23': '13', '24': '13', '26': '16', '27': '16', '29': '04',
-    '30': '04', '31': '01', '32': '20', '33': '15', '34': '08', '35': '23', '36': '26', '39': '11'
-  },
-  night: {
-    '0': '31', '1': '31', '2': '29', '3': '29', '9': '11', '13': '12', '16': '18',
-    '19': '18', '22': '46', '25': '16', '28': '04'
-  }
-};
-
-const textMappings = {
-  'Sandstorm': _('Sand Storm'),
-  'Light Rain Showers': _('Light Rain Shower'),
-  'Heavy Rain Showers': _('Heavy Rain Shower'),
-  'Sleet Showers': _('Sleet Shower'),
-  'Hail Showers': _('Hail Shower'),
-  'Thundery Showers': _('Thundery Shower')
-};
-
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID) {
     super(stationID);
@@ -84,15 +62,18 @@ var Driver = class Driver extends wxBase.Driver {
         return this._showError(deskletObj, _('Invalid Station ID'));
       }
 
-      const meta = await this._loadMeta();
-      if (!meta) return this._showError(deskletObj, _('Failed to get location metadata'));
-      if (this.latlon && !await this._parseLocation(meta)) {
-        return this._showError(deskletObj, _('Failed to process location data'));
-      }
+      let params = this._params();
 
+      let metaURL = this.latlon ? `${this.locationURL}` : `${this.locationURL}/${this.locationID}`;
+      const meta = await this._loadDataWithParams(metaURL, 'meta', params);
+      if (!meta) return this._showError(deskletObj, _('Failed to get location metadata'));
+      if (this.latlon && !await this._parseLocation(meta)) return this._showError(deskletObj, _('Failed to process location data'));
+     
+      let observationURL = `${this._baseURL}/observation/${this.locationID}`;
+      let forecastURL = `${this._baseURL}/forecast/aggregated/${this.locationID}`;
       const [current, forecast] = await Promise.all([
-        this._loadData('observation', 'observations'),
-        this._loadData('forecast/aggregated', 'forecasts')
+        this._loadData(observationURL, 'observations'),
+        this._loadData(forecastURL, 'forecasts')
       ]); 
       
       if (!current || !forecast) {
@@ -153,21 +134,20 @@ var Driver = class Driver extends wxBase.Driver {
     });
   }
 
-  async _loadMeta() {
+  async _loadDataWithParams(URL, API, params) {
     try {
-      this.localURL = this.latlon ? `${this.locationURL}` : `${this.locationURL}/${this.locationID}`;
-      const rawData = await this._getWeatherAsync(this.localURL, this._params());
+      const rawData = await this._getWeatherAsync(URL, params);
       const json = JSON.parse(rawData);
       return json.response ? json : false;
     } catch (err) {
-      global.logError(`BBC: Error loading data meta: ${err.message}`);
+      global.logError(`BBC: Error loading data ${API}: ${err.message}`);
       return false;
     }
   }  
 
-  async _loadData(endpoint, API) {
+  async _loadData(URL, API) {
     try {
-      const rawData = await this._getWeatherAsync(`${this._baseURL}/${endpoint}/${this.locationID}`);
+      const rawData = await this._getWeatherAsync(URL);
       const json = JSON.parse(rawData);
       return json ? json : false;
     } catch (err) {
@@ -264,12 +244,33 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   _mapIcon(icon, isNight) {
+    const iconMappings = {
+      day: {
+        '1': '32', '2': '30', '3': '30', '4': '23', '5': '20', '6': '20', '7': '26', '8': '26d',
+        '10': '11', '11': '09', '12': '11', '14': '12', '15': '12', '17': '18', '18': '18',
+        '20': '18', '21': '18', '23': '13', '24': '13', '26': '16', '27': '16', '29': '04',
+        '30': '04', '31': '01', '32': '20', '33': '15', '34': '08', '35': '23', '36': '26', '39': '11'
+      },
+      night: {
+        '0': '31', '1': '31', '2': '29', '3': '29', '9': '11', '13': '12', '16': '18',
+        '19': '18', '22': '46', '25': '16', '28': '04'
+      }
+    };
+
     return isNight && iconMappings.night[icon] 
       ? iconMappings.night[icon] 
       : iconMappings.day[icon] || 'na';
   }
 
   _mapDescription(code) {
+    const textMappings = {
+      'Sandstorm': _('Sand Storm'),
+      'Light Rain Showers': _('Light Rain Shower'),
+      'Heavy Rain Showers': _('Heavy Rain Shower'),
+      'Sleet Showers': _('Sleet Shower'),
+      'Hail Showers': _('Hail Shower'),
+      'Thundery Showers': _('Thundery Shower')
+    };
     return code ? textMappings[code] || _(code) : '';
   }
 };
