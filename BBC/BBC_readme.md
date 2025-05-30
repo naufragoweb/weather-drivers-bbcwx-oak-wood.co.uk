@@ -70,6 +70,21 @@ The BBC Weather Service uses 3 complementary APIs:
 *** User experience can be improved with small adjustments to the flow.
 
 --------------------------------------------------------------------------------
+
+Update 2025-05-30
+
+1. Code optimization:
+
+* Insert _params() function to _loadMeta();
+
+* Replacing the _loadCurrent and _loadForecast functions with the _loadData function;
+
+* Optimization of the _loadMeta function;
+
+* Script cleaning and standardization;
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-29 (Refactored Code)
 
 I will detail all the changes I made to make the code simpler and more compact, while maintaining the same functionality:
