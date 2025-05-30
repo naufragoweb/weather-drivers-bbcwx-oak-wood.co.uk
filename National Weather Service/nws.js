@@ -1,4 +1,4 @@
-// National Weather Service Driver JSON API 2.5.1
+// National Weather Service Driver JSON API 2.5.1 - Refactored Version
 
 const UUID = 'bbcwx@oak-wood.co.uk';
 const DESKLET_DIR = imports.ui.deskletManager.deskletMeta[UUID].path;
@@ -7,334 +7,180 @@ const wxBase = imports.wxbase;
 const GLib = imports.gi.GLib;
 const Gettext = imports.gettext;
 
-const SERVICE_STATUS_ERROR = wxBase.SERVICE_STATUS_ERROR;
-const SERVICE_STATUS_OK = wxBase.SERVICE_STATUS_OK;
-const SERVICE_STATUS_INIT = wxBase.SERVICE_STATUS_INIT;
+const { SERVICE_STATUS_ERROR, SERVICE_STATUS_OK, SERVICE_STATUS_INIT } = wxBase;
+const MAX_DAYS = 7;
 
-const NWS_DRIVER_MAX_DAYS = 7; // Constant for the number of BBC days
+Gettext.bindtextdomain(UUID, `${GLib.get_home_dir()}/.local/share/locale`);
+const _ = str => str ? Gettext.dgettext(UUID, str) || Gettext.dgettext('cinnamon', str) || str : '';
 
-Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
+const ICON_MAPPINGS = {
+  day: {
+    'skc': '32', 'few': '34', 'sct': '30', 'bkn': '28', 'ovc': '26d',
+    'wind_skc': '32', 'wind_few': '34', 'wind_sct': '30', 'wind_bkn': '28',
+    'wind_ovc': '26d', 'snow': '14', 'rain_snow': '15', 'rain_sleet': '06',
+    'snow_sleet': '07', 'fzra': '10', 'rain_fzra': '10', 'snow_fzra': '10',
+    'sleet': '18', 'rain': '11', 'rain_showers': '12', 'rain_showers_hi': '04',
+    'tsra': '04', 'tsra_sct': '04', 'tsra_hi': '04', 'tornado': '00',
+    'hurricane': '01', 'tropical_storm': '01', 'dust': '19', 'smoke': '19',
+    'haze': '22', 'hot': '36', 'cold': '25', 'blizzard': '15', 'fog': '20'
+  },
+  night: {
+    'skc': '31', 'few': '33', 'sct': '29', 'bkn': '27', 
+    'wind_skc': '31', 'wind_few': '33', 'wind_sct': '29', 'wind_bkn': '27',
+    'haze': '21'
+  }
+};
 
-function _(str) {
-  return str ? Gettext.dgettext(UUID, str) || Gettext.dgettext('cinnamon', str) || str : '';
-}
+const TEXT_MAPPINGS = {
+  '0': isDay => isDay ? _('Sunny') : _('Clear Sky'),
+  '1': _('Mainly Clear')
+};
 
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID, version) {
-    
     super(stationID);
-    this.maxDays = 7;
+    this.maxDays = MAX_DAYS;
     this.version = version;
-    
+
     this.capabilities.meta.country = false;
     this.capabilities.cc.feelslike = false;
     this.capabilities.cc.pressure_direction = false;
     this.capabilities.forecast.pressure = false;
-
+    
     this.drivertype = 'nws';
     this.linkText = 'https://www.weather.gov/';
     this.linkURL = '';
     this.locationURL = '';
     this.baseURL = 'https://api.weather.gov/';
-    this.linkIcon = { 
-      file: 'nsw', 
-      width: 120, 
-      height: 51 
-    };
+    this.linkIcon = { file: 'nws', width: 50, height: 50 };
 
-    this.currentURL = '';
-    this.forecastURL = '';
+    this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
   }
 
-  // Override _emptyData from wxbase.js to avoid race conditions
-    // when initializing this.data.days.
-    _emptyData() {
-        // Initializes the metadata parts of this.data
-        this.data.city = '';
-        this.data.region = '';
-        this.data.wgs84 = new Object();
-        this.data.wgs84.lat = '';
-        this.data.wgs84.lon = '';
-
-        // Initializes the current conditions (cc) object
-        this.data.cc = new Object();
-        this.data.cc.has_temp = false;
-        this.data.cc.humidity = '';
-        this.data.cc.icon = '';
-        this.data.cc.temperature = '';
-        this.data.cc.visibility = '';
-        this.data.cc.weathertext = '';
-        this.data.cc.wind_direction = '';
-        this.data.cc.wind_speed = '';
-
-        // Constructs a new array and assigns it atomically.
-        this.data.days = [];
-        
-        // Use the constant BBC_DRIVER_MAX_DAYS to ensure the array is always the correct size for BBC,
-        // regardless of the value of this.maxDays during the call to super() in the constructor.
-        // This ensures that the array is always the correct size, regardless of the original this.maxDays value in wxbase.
-        for (let i = 0; i < NWS_DRIVER_MAX_DAYS; i++) {
-            this.data.days[i] = {
-                day: '',
-                humidity: '',
-                icon: '',
-                maximum_temperature: '',
-                minimum_temperature: '',
-                weathertext: '',
-                wind_direction: '',
-                wind_speed: ''
-            };
-        }
-    }
-
+  _emptyData() {
+    this.data = {
+      city: '',
+      region: '',
+      wgs84: { lat: '', lon: '' },
+      cc: {
+        has_temp: '', humidity: '', icon: '', temperature: '',
+        visibility: '', weathertext: '', wind_direction: '', wind_speed: ''
+      },
+      days: Array(MAX_DAYS).fill().map(() => ({
+        day: '', humidity: '', icon: '', maximum_temperature: '',
+        minimum_temperature: '', weathertext: '', wind_direction: '', wind_speed: ''
+      })),
+      status: {}
+    };
+  }
 
   async refreshData(deskletObj) {
+    this.data.status = {
+      cc: SERVICE_STATUS_INIT,
+      forecast: SERVICE_STATUS_INIT,
+      meta: SERVICE_STATUS_INIT,
+      lasterror: false
+    };
 
-    // reset the services object at the beginning of refreshData
-    this.data.status = {};
-    this.data.status.cc = SERVICE_STATUS_INIT;
-    this.data.status.forecast = SERVICE_STATUS_INIT;
-    this.data.status.meta = SERVICE_STATUS_INIT;
-    this.data.status.lasterror = false;
-
-    // Execute script synchronously
     try {
-
-      this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
-
-      // Check user input for stationID
-      if (!await this._verify_station()) {
+      if (!await this._verifyStation()) {
         return this._showError(deskletObj, _('Invalid Station ID'));
       }
 
-      // Fetch API for location (meta data) and links for other forecasts
-      const meta = await this._load_meta();
+      const meta = await this._loadMeta();
       if (!meta) {
         return this._showError(deskletObj, _('Failed to get location metadata'));
-      } 
-
-      // Fetch URL for current conditions and 7 days forecasts
-      if (!await this._parse_URLs(meta)) {
-        return this._showError(deskletObj, _('Error fetching URLs current and forecast'));
       }
 
-      const obsStationsID = await this._load_observationStations();
+      await this._parseURLs(meta);
+
+      const obsStationsID = await this._loadObservationStations();
       if (!obsStationsID) {
         return this._showError(deskletObj, _('Failed to get observation stations ID'));
-      } 
-
-      // Fetch observation Station ID for current conditions API
-      if (!await this._parse_obsStation(obsStationsID)) {
-        return this._showError(deskletObj, _('Error fetching observation station ID'));
       }
 
-      // Fetch current conditions
-      const lastest = await this._load_lastest();
-      if (!lastest) {
-        return this._showError(deskletObj, _('Failed to get current conditions'));
-      } 
+      await this._parseObsStation(obsStationsID);
 
-      // Fetch forecast 1 hour data
-      const forecast1h = await this._load_forecast1h();
-      if (!forecast1h) {
-        return this._showError(deskletObj, _('Failed to get hourly forecast data'));
-      }
+      const [lastest, forecast1h, forecast12h, forecastDaily] = await Promise.all([
+        this._loadLastest(),
+        this._loadForecast1h(),
+        this._loadForecast12h(),
+        this._loadForecastDaily()
+      ]);
 
-      // Fetch forecast 12 hours data
-      const forecast12h = await this._load_forecast12h();
-      if (!forecast12h) {
-        return this._showError(deskletObj, _('Failed to get forecast 12 hours data'));
-      }
-
-      // Fetch forecast daily data
-      const forecastDaily = await this._load_forecastDaily();
-      if (!forecastDaily) {
-        return this._showError(deskletObj, _('Failed to get forecast daily data'));
+      if (!lastest || !forecast1h || !forecast12h || !forecastDaily) {
+        return this._showError(deskletObj, _('Failed to load some weather data'));
       }
 
       this._emptyData();
+      
+      // Data process
+      await Promise.all([
+        this._parseMetaData(meta),
+        this._parseCurrentData(lastest, forecast1h),
+        this._parseForecastData(forecast1h, forecast12h, forecastDaily),
+      ]);
 
-      // Load data in objects to display
-      if (!await this._parse_data(meta, lastest, forecast1h, forecast12h, forecastDaily)) {
-        return this._showError(deskletObj, _('Failed to process all data'));
-      }
+      this.linkURL = `https://forecast.weather.gov/MapClick.php?textField1=${this.data.wgs84.lat}&textField2=${this.data.wgs84.lon}`;
 
-      this.linkURL = 'https://forecast.weather.gov/MapClick.php?textField1=' + this.data.wgs84.lat + '&textField2=' + this.data.wgs84.lon;
-
-      // Display data in the desklet
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
       deskletObj.displayForecast();
 
       return true;
-
     } catch (err) {
-      global.logError(`National Weather Service: refreshData error: ${err.message}`);
+      global.logError(`NWS Driver error: ${err.message}`);
       this._showError(deskletObj, _('An unexpected error occurred: %s').format(err.message));
-    }
-  }
-
-   _params() {
-    return {
-      'units': 'si',
-    };
-  }
-
-   async _verify_station() {
-    if (!this.stationID || typeof this.stationID !== 'string') {
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Station ID not defined');
       return false;
     }
+  }
+
+  _params() {
+    return { units: 'si' };
+  }
+
+  async _verifyStation() {
+    if (!this.stationID || typeof this.stationID !== 'string') {
+      this.data.status = { meta: SERVICE_STATUS_ERROR, lasterror: _('Station ID not defined') };
+      return false;
+    }
+    
     if (/^\-?\d+(\.\d+)?,\-?\d+(\.\d+)?$/.test(this.stationID)) {
-      const [lat, lon] = this.stationID.split(',').map(v => parseFloat(v.trim()));
-      this.latlon = [lat, lon];
-    } 
+      this.latlon = this.stationID.split(',').map(Number);
+    }
     return true;
   }
 
   _getWeatherAsync(url, params = null) {
     return new Promise((resolve, reject) => {
-      this._getWeather(url, (weather) => {
-        if (weather) {
-          resolve(weather);
-        } else {
-          const error = new Error(`Failed to retrieve data from ${url}. Response was empty or indicated failure.`);
-          reject(error);
-        }      
-      }, params, this.userAgent); 
+      this._getWeather(url, weather => 
+        weather ? resolve(weather) : reject(new Error(`Failed to retrieve data from ${url}`))
+      , params, this.userAgent);
     });
   }
 
-  async _load_meta() {
-    let metaURL = `${this.baseURL}points/${this.latlon[0]},${this.latlon[1]}`;
+  async _loadMeta() {
     try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(metaURL);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json || !json.id || json.id.length === 0) {
-          this.data.status.meta = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid meta data response');
-          return null;
-        }
-        this.data.status.meta = SERVICE_STATUS_OK;
-        return json;
+      const metaURL = `${this.baseURL}points/${this.latlon[0]},${this.latlon[1]}`;
+      const json = JSON.parse(await this._getWeatherAsync(metaURL));
+      
+      if (!json?.id) {
+        this.data.status = { meta: SERVICE_STATUS_ERROR, lasterror: _('Invalid meta data response') };
+        return null;
       }
-    } catch (err) {
-      global.logError(`National Weather Service: _load_meta error: ${err.message}`);
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Error retrieving current data: %s').format(err.message);
-      return null;
-    }
-  }
-
-  async _load_observationStations() {
-    try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(this.observationURL);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json || !json.type || json.type.length === 0) {
-          this.data.status.cc = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid observation stations response');
-          return null;
-        }
+      
+      this.data.status.meta = SERVICE_STATUS_OK;
       return json;
-      }
     } catch (err) {
-      global.logError(`National Weather Service: Error retrieving _load_observationStations data: ${err.message}`);
+      this.data.status = { 
+        meta: SERVICE_STATUS_ERROR, 
+        lasterror: _('Error retrieving metadata: %s').format(err.message) 
+      };
       return null;
     }
   }
 
-  async _load_lastest() {
-    this.lastestURL = `${this.baseURL}/stations/${this.obsStationID}/observations/latest`
-    try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(this.lastestURL);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json || !json.type || json.type.length === 0) {
-          this.data.status.cc = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid observation stations response');
-          return null;
-        }
-      return json;
-      }
-    } catch (err) {
-      global.logError(`National Weather Service: Error retrieving _load_observationStations data: ${err.message}`);
-      return null;
-    }
-  }
-
-  async _load_forecast1h() {
-    try {
-      let params = this._params();
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(this.forecast1hURL, params);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json || !json.type || json.type.length === 0) {
-          this.data.status.cc = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid forecast1h response');
-          return null;
-        }
-      return json;
-      }
-    } catch (err) {
-      global.logError(`National Weather Service: Error retrieving _load_forecast1h data: ${err.message}`);
-      return null;
-    }
-  }
-
-  async _load_forecast12h() {
-    let params = this._params();
-    try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(this.forecast12hURL, params);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json || !json.type || json.type.length === 0) {
-          this.data.status.forecast = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid forecast12h response');
-          return null;
-        }
-      return json;
-      }
-    } catch (err) {
-      global.logError(`National Weather Service: Error retrieving _load_forecast12h data: ${err.message}`);
-      return null;
-    }
-  }
-
-  async _load_forecastDaily() {
-    try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(this.forecastDailyURL);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json || !json.type || json.type.length === 0) {
-          this.data.status.forecast = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid forecastDaily response');
-          return null;
-        }
-      return json;
-      }
-    } catch (err) {
-      global.logError(`National Weather Service: Error retrieving _load_forecast data: ${err.message}`);
-      return null;
-    }
-  }
-
-   async _parse_URLs(meta) {
-    
+  async _parseURLs(meta) {
     this.observationURL = meta.properties.observationStations;
     this.forecast1hURL = meta.properties.forecastHourly;
     this.forecast12hURL = meta.properties.forecast;
@@ -342,177 +188,212 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
-   async _parse_obsStation(obsStationsID) {
-    
+  async _loadObservationStations() {
+    try {
+      const json = JSON.parse(await this._getWeatherAsync(this.observationURL));
+      return json?.type ? json : null;
+    } catch (err) {
+      global.logError(`NWS: Error loading observation stations: ${err.message}`);
+      return null;
+    }
+  }
+
+  async _parseObsStation(obsStationsID) {
     this.obsStationID = obsStationsID.features[0].properties.stationIdentifier;
     return true;
   }
 
-  async _parse_data(meta, lastest, forecast1h, forecast12h, forecastDaily) {
-    if (!meta) {
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing meta data');
-      return false;
-    }
-    if (!lastest) {
-      this.data.status.cc = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing current data');
-      return false;
-    }
-    if (!forecast1h) {
-      this.data.status.forecast = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing forecast1h data');
-      return false;
-    }
-    if (!forecast12h) {
-      this.data.status.forecast = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing forecast12h data');
-      return false;
-    }
-    if (!forecastDaily) {
-      this.data.status.forecast = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing forecastDaily data');
-      return false;
-    }
-
-    try{
-
-      // Meta data
-      let location = meta.properties.relativeLocation;
-
-      this.data.city = location.properties.city;
-      this.data.region = location.properties.state;
-      this.data.wgs84 = {
-        lat: location.geometry.coordinates[1],
-        lon: location.geometry.coordinates[0]
-      };
-
-      this.data.status.meta = SERVICE_STATUS_OK;
-
-    } catch (e) {
-      global.logError(e);
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Incomplete location metadata');
-      return false;
-    }
-
-    const isDaytime = forecast1h.properties.periods[0].isDaytime === true;
-    
-    // Current data
+  async _loadLastest() {
     try {
-      let current = lastest.properties;
-      let current1h = forecast1h.properties.periods[0];
+      const json = JSON.parse(await this._getWeatherAsync(`${this.baseURL}/stations/${this.obsStationID}/observations/latest`));
+      return json?.type ? json : null;
+    } catch (err) {
+      global.logError(`NWS: Error loading latest observations: ${err.message}`);
+      return null;
+    }
+  }
 
-      this.data.cc.temperature = current.temperature.value ?? current1h.temperature ?? '';
-      this.data.cc.humidity = current.relativeHumidity.value ?? current1h.relativeHumidity ?? '';
-      this.data.cc.pressure = Math.round(current.barometricPressure.value / 100) ?? '';
-      this.data.cc.wind_speed = current.windSpeed.value ?? (current1h.windSpeed.match(/\d+/)[0] ?? null) ?? '';
-      this.data.cc.wind_direction = this.compassDirection(current.windDirection.value) ?? current1h.windDirection ?? '';
-      this.data.cc.visibility = Math.round(current.visibility.value / 1000) ?? '';
-      this.data.cc.icon = this.mapicon((current.icon || current1h.icon).split('?')[0].split('/').pop().split(',')[0], isDaytime);  // extract from icon URL
-      this.data.cc.weathertext = this._mapDescription((current.textDescription || current1h.shortForecast), isDaytime);  // extract from icon URL;
-      this.data.cc.has_temp = true;
+  async _loadForecast1h() {
+    try {
+      const json = JSON.parse(await this._getWeatherAsync(this.forecast1hURL, this._params()));
+      return json?.type ? json : null;
+    } catch (err) {
+      global.logError(`NWS: Error loading 1h forecast: ${err.message}`);
+      return null;
+    }
+  }
+
+  async _loadForecast12h() {
+    try {
+      const json = JSON.parse(await this._getWeatherAsync(this.forecast12hURL, this._params()));
+      return json?.type ? json : null;
+    } catch (err) {
+      global.logError(`NWS: Error loading 12h forecast: ${err.message}`);
+      return null;
+    }
+  }
+
+  async _loadForecastDaily() {
+    try {
+      const json = JSON.parse(await this._getWeatherAsync(this.forecastDailyURL));
+      return json?.type ? json : null;
+    } catch (err) {
+      global.logError(`NWS: Error loading daily forecast: ${err.message}`);
+      return null;
+    }
+  }
+
+  async _parseMetaData(meta) {
+    try{
+      const location = meta.properties.relativeLocation;
+      Object.assign(this.data, {
+        city: location.properties.city,
+        region: location.properties.state,
+        wgs84: {
+          lat: location.geometry.coordinates[1],
+          lon: location.geometry.coordinates[0]
+        }
+      });  
+      this.data.status.meta = SERVICE_STATUS_OK;
+    } catch (err) {
+      global.logError(`Error parsing meta data: ${err.message}`);
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Error processing meta data');
+    }
+    return true;
+  }
+
+  async _parseCurrentData(lastest, forecast1h) {
+    try {
+      const current = lastest.properties;
+      const current1h = forecast1h.properties.periods[0];
+      const isDaytime = current1h.isDaytime;
+
+      Object.assign(this.data.cc, {
+        temperature: current.temperature.value ?? current1h.temperature,
+        humidity: current.relativeHumidity.value ?? current1h.relativeHumidity,
+        pressure: Math.round(current.barometricPressure.value / 100),
+        wind_speed: current.windSpeed.value ?? (current1h.windSpeed?.match(/\d+/)?.[0] ?? null),
+        wind_direction: this.compassDirection(current.windDirection?.value) ?? current1h.windDirection,
+        visibility: current.visibility.value != null ? Math.round(current.visibility.value / 1000) : '', // Adicionada verificação para null/undefined
+        icon: this._mapIcon((current.icon ?? current1h.icon).split('?')[0].split('/').pop().split(',')[0], isDaytime),
+        weathertext: this._mapDescription(current.textDescription ?? current1h.shortForecast, isDaytime),
+        has_temp: true
+      });
       
       this.data.status.cc = SERVICE_STATUS_OK;
-
-    } catch (e) {
-      global.logError(e);
+    } catch (err) {
+      global.logError(`Error parsing current data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Incomplete current data');
-      return false;
+      this.data.status.lasterror = _('Error processing current conditions');
     }
+    return true;
+  }
 
-    // Forecast data
+  async _parseForecastData(forecast1h, forecast12h, forecastDaily) {
     try {
+      const isDaytime = forecast1h.properties.periods[0].isDaytime;
       const periods12h = forecast12h.properties.periods;
       const dailyProps = forecastDaily.properties;
-      // A variável `isDaytime` é definida antes deste bloco try/catch no código original,
-      // referindo-se a `forecast1h.properties.periods[0].isDaytime`.
 
-      // DAY 0
+       // Process day 0 (today)
       const period0 = periods12h[0];
-      this.data.days[0].day = this._getDayName(0);
-      this.data.days[0].icon = this.mapicon(period0.icon.split('?')[0].split('/').pop().split(',')[0], isDaytime);
-      this.data.days[0].weathertext = this._mapDescription(period0.shortForecast, isDaytime);
-      this.data.days[0].wind_speed = Number(period0.windSpeed.match(/\d+/)[0]) ?? '';
-      this.data.days[0].wind_direction = period0.windDirection ?? '';
-      this.data.days[0].maximum_temperature = dailyProps.maxTemperature.values[0].value ?? '';
-      this.data.days[0].minimum_temperature = dailyProps.minTemperature.values[0].value ?? '';
-      this.data.days[0].humidity = dailyProps.relativeHumidity.values[0].value ?? '';
-      //this.data.days[0].pressure = Math.round(dailyProps.pressure.values[0].value / 100);
+      Object.assign(this.data.days[0], {
+        day: this._getDayName(0),
+        icon: this._mapIcon(period0.icon.split('?')[0].split('/').pop().split(',')[0], isDaytime),
+        weathertext: this._mapDescription(period0.shortForecast, isDaytime),
+        wind_speed: period0.windSpeed.match(/\d+/) ? Number(period0.windSpeed.match(/\d+/)[0]) : '',
+        wind_direction: period0.windDirection ?? '',
+        maximum_temperature: dailyProps.maxTemperature?.values[0]?.value ?? '',
+        minimum_temperature: dailyProps.minTemperature?.values[0]?.value ?? '',
+        humidity: dailyProps.relativeHumidity?.values[0]?.value ?? ''
+        //pressure: Math.round(dailyProps.pressure.values[0].value / 100),
+      });
 
-      // Agrupa valores de forecastDaily por diaOffset (1-6)
-      const dailyAggregatedValues = {}; // Chave: dayOffset, Valor: { maxTemps: [], minTemps: [], humidities: [], pressuresPa: [] }
+      // --- Aggregation of forecastDaily values ​​by dayOffset (1 to maxDays-1) ---
+      const dailyAggregatedValues = {};
 
-      const getDayOffsetFromTimestamp = (timeStr) => {
-        const entryDate = new Date(timeStr.split('/')[0]);
-        const entryDayStart = new Date(entryDate.getUTCFullYear(), entryDate.getUTCMonth(), entryDate.getUTCDate());
-        // Usar a data local do primeiro período como base para o offset
-        const baseDateForOffset = new Date(periods12h[0].startTime);
-        const baseDayStart = new Date(baseDateForOffset.getUTCFullYear(), baseDateForOffset.getUTCMonth(), baseDateForOffset.getUTCDate());
-        return Math.round((entryDayStart - baseDayStart) / (1000 * 60 * 60 * 24));
+      // Calculates the UTC start of the day of the first forecast as the basis for offsets
+      const baseDayStartForOffset = new Date(Date.UTC(
+        new Date(periods12h[0].startTime).getUTCFullYear(),
+        new Date(periods12h[0].startTime).getUTCMonth(),
+        new Date(periods12h[0].startTime).getUTCDate()
+      ));
+
+      const getDayOffset = (timeStr) => {
+        const entryDay = new Date(Date.UTC(
+          new Date(timeStr.split('/')[0]).getUTCFullYear(),
+          new Date(timeStr.split('/')[0]).getUTCMonth(),
+          new Date(timeStr.split('/')[0]).getUTCDate()));
+        return Math.round((entryDay.getTime() - baseDayStartForOffset.getTime()) / (1000 * 60 * 60 * 24));
+      };
+      
+      const propToFieldMap = {
+        maxTemperature: 'maxTemps',
+        minTemperature: 'minTemps',
+        relativeHumidity: 'humidities',
+        pressure: 'pressuresPa'
       };
 
-      ['maxTemperature', 'minTemperature', 'relativeHumidity', 'pressure'].forEach(propName => {
-        if (!dailyProps[propName] || !dailyProps[propName].values) return;
+      Object.keys(propToFieldMap).forEach(propName => {
+        if (!dailyProps[propName]?.values) return;
+        
         dailyProps[propName].values.forEach(entry => {
-          const dayOffset = getDayOffsetFromTimestamp(entry.validTime);
+          const dayOffset = getDayOffset(entry.validTime);
           if (dayOffset >= 1 && dayOffset < this.maxDays) {
             if (!dailyAggregatedValues[dayOffset]) {
+              // Initializes the object to the offset if it does not already exist
               dailyAggregatedValues[dayOffset] = { maxTemps: [], minTemps: [], humidities: [], pressuresPa: [] };
             }
-            if (propName === 'maxTemperature') dailyAggregatedValues[dayOffset].maxTemps.push(entry.value);
-            if (propName === 'minTemperature') dailyAggregatedValues[dayOffset].minTemps.push(entry.value);
-            if (propName === 'relativeHumidity') dailyAggregatedValues[dayOffset].humidities.push(entry.value);
-            if (propName === 'pressure') dailyAggregatedValues[dayOffset].pressuresPa.push(entry.value);
+            const fieldName = propToFieldMap[propName];
+            dailyAggregatedValues[dayOffset][fieldName].push(entry.value);
           }
         });
       });
 
+      // --- Processing forecast days (1 to maxDays-1) ---
       for (let i = 1; i < this.maxDays; i++) {
         this.data.days[i].day = this._getDayName(i);
 
-        // Dados de forecast12h (período diurno às 06:00 para o dia i)
-        // Calcular a data alvo (targetDayKey) para o dia 'i' com base na data local do primeiro período.
-        const dateOfPeriod0Local = new Date(periods12h[0].startTime);
-        const targetLocalDate = new Date(dateOfPeriod0Local);
-        targetLocalDate.setDate(dateOfPeriod0Local.getDate() + i);
+        // Calculates the target local date for day 'i'
+        const targetLocalDate = new Date(new Date(periods12h[0].startTime));
+        targetLocalDate.setDate(new Date(periods12h[0].startTime).getDate() + i);
         
         const targetYear = targetLocalDate.getFullYear();
         const targetMonth = ('0' + (targetLocalDate.getMonth() + 1)).slice(-2);
         const targetDay = ('0' + targetLocalDate.getDate()).slice(-2);
-        const targetDayKey = `${targetYear}-${targetMonth}-${targetDay}`; // Formato YYYY-MM-DD
+        const targetDayKey = `${targetYear}-${targetMonth}-${targetDay}`; // Format YYYY-MM-DD
 
+        // Find the corresponding 12h period (daytime, 06:00)
         const periodForDay = periods12h.find(p => {
-          // Garantir que startTime existe e isDaytime é um booleano
-          if (!p.startTime || typeof p.isDaytime !== 'boolean') {
-            return false;
-          }
+          if (!p.startTime || typeof p.isDaytime !== 'boolean') return false;
+          
           const pStartTimeString = p.startTime; // ex: "2024-03-18T06:00:00-07:00"
           const periodLocalDayString = pStartTimeString.substring(0, 10); // ex: "2024-03-18"
           const periodLocalHourString = pStartTimeString.substring(11, 13); // ex: "06"
 
-          return periodLocalDayString === targetDayKey && periodLocalHourString === "06";
-                 p.isDaytime === true; // Queremos o período diurno que começa às 06:00
+          return periodLocalDayString === targetDayKey && 
+                 periodLocalHourString === "06" && // Assuming "06" is the target time
+                 p.isDaytime === true; // We want the daytime period
         });
 
         if (periodForDay) {
-          this.data.days[i].icon = this.mapicon(periodForDay.icon.split('?')[0].split('/').pop().split(',')[0], true); // true para isDaytime (06:00)
+          this.data.days[i].icon = this._mapIcon(periodForDay.icon.split('?')[0].split('/').pop().split(',')[0], true);
           this.data.days[i].weathertext = this._mapDescription(periodForDay.shortForecast, true);
-          this.data.days[i].wind_speed = Number(periodForDay.windSpeed.match(/\d+/)[0]);
-          this.data.days[i].wind_direction = periodForDay.windDirection;
+          this.data.days[i].wind_speed = periodForDay.windSpeed.match(/\d+/) ? Number(periodForDay.windSpeed.match(/\d+/)[0]) : '';
+          this.data.days[i].wind_direction = periodForDay.windDirection ?? '';
         }
 
-        // Dados de forecastDaily agregados para o dia i
+        // Assigns the aggregated values ​​of forecastDaily
         const aggregated = dailyAggregatedValues[i];
         if (aggregated) {
           if (aggregated.maxTemps.length) this.data.days[i].maximum_temperature = Math.max(...aggregated.maxTemps);
           if (aggregated.minTemps.length) this.data.days[i].minimum_temperature = Math.min(...aggregated.minTemps);
-          if (aggregated.humidities.length) this.data.days[i].humidity = Math.max(...aggregated.humidities);
+          if (aggregated.humidities.length) this.data.days[i].humidity = Math.max(...aggregated.humidities); // Keep Math.max as original
           
           const validPressures = aggregated.pressuresPa.filter(val => typeof val === 'number' && val !== null);
           if (validPressures.length > 0) {
-            this.data.days[i].pressure = Math.round(Math.max(...validPressures) / 100);
+            this.data.days[i].pressure = Math.round(Math.max(...validPressures) / 100); // Keeps Math.max and conversion
           }
         }
       }
@@ -529,90 +410,19 @@ var Driver = class Driver extends wxBase.Driver {
   } 
 
   _getDayName(index) {
-    // Use the abbreviations that correspond to the keys in desklet.js's this.daynames
-    const dayNamesAbbr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const today = new Date();
-    const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
-    const dayIndex = (currentDay + index) % 7;
-    return dayNamesAbbr[dayIndex]; // Returns the day abbreviation
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return dayNames[(new Date().getDay() + index) % 7];
   }
 
-  mapicon(icon, isDaytime) {
-    
-    const icons = {
-      'skc': '32',              // (Fair/clear)                         (Sunny)
-      'few': '34',              // (A few clouds)                       (Few clouds)
-      'sct': '30',              // (Partly cloudy)                      (Partly cloudy)
-      'bkn': '28',              // (Mostly cloudy)                      (Mostly cloudy)
-      'ovc': '26d',             // (Overcast)                           (Overcast)
-      'wind_skc': '32',         // (Fair/clear and windy)               (Sunny/Clear)
-      'wind_few': '34',         // (A few clouds and windy)             (Few clouds)
-      'wind_sct': '30',         // (Partly cloudy and windy)            (Partly cloudy)
-      'wind_bkn': '28',         // (Mostly cloudy and windy)            (Mostly cloudy)
-      'wind_ovc': '26d',        // (Overcast and windy)                 (Overcast)
-      'snow': '14',             // (Snow)                               (Snow)
-      'rain_snow': '15',        // (Rain and snow)                      (Rain and snow)
-      'rain_sleet': '06',       // (Rain and sleet)                     (Rain and sleet)
-      'snow_sleet': '07',       // (Snow and sleet)                     (Snow and sleet)
-      'fzra': '10',             // (Freezing rain)                      (Freezing rain)
-      'rain_fzra': '10',        // (Rain/freezing rain)                 (Rain and freezing rain)
-      'snow_fzra': '10',        // (Freezing rain/snow)                 (Snow and freezing rain)
-      'sleet': '18',            // (Sleet)                              (Sleet)
-      'rain': '11',             // (Rain)                               (Rain)
-      'rain_showers': '12',     // (Rain showers (high cloud cover))    (Rain showers)
-      'rain_showers_hi': '04',  // (Rain showers (low cloud cover))     (Rain showers)
-      'tsra': '04',             // (Thunderstorm (high cloud cover))    (Thunderstorm)
-      'tsra_sct': '04',         // (Thunderstorm (medium cloud cover))  (Thunderstorm)
-      'tsra_hi': '04',          // (Thunderstorm (low cloud cover))     (Thunderstorm)
-      'tornado': '00',          // (Tornado)                            (Tornado)
-      'hurricane': '01',        // (Hurricane conditions)               (Hurricane)
-      'tropical_storm': '01',   // (Tropical storm conditions)          (Tropical storm)
-      'dust': '19',             // (Dust)                               (Dust)
-      'smoke': '19',            // (Smoke)                              (Smoke)
-      'haze': '22',             // (Haze)                               (Haze)
-      'hot': '36',              // (Hot)                                (Hot)
-      'cold': '25',             // (Cold)                               (Cold)
-      'blizzard': '15',         // (Blizzard)                           (Blizzard)
-      'fog': '20'               // (Fog/mist)                           (Fog)
-    };
-
-    const nightIcons = {
-      'skc': '31',        // Clear Sky
-      'few': '33',        // Few clouds
-      'sct': '29',        // Partly cloudy
-      'bkn': '27',        // Mostly cloudy
-      'wind_skc': '31',   // Clear Sky
-      'wind_few': '33',   // Few clouds
-      'wind_sct': '29',   // Partly cloudy
-      'wind_bkn': '27',   // Mostly cloudy
-      'haze': '21',       // Haze
-    };
-
-    let iconCode = 'na';
-    const iconKey = icon ? icon.toString() : '';
-
-    if (icon && (typeof icons[icon] !== 'undefined')) {
-    iconCode = icons[icon];
-    }
-
-    if (!isDaytime && (typeof nightIcons[icon] !== 'undefined')) {
-    iconCode = nightIcons[icon];
-    }
-    return iconCode;
+  _mapIcon(icon, isDaytime) {
+    return !isDaytime && ICON_MAPPINGS.night[icon] 
+      ? ICON_MAPPINGS.night[icon] 
+      : ICON_MAPPINGS.day[icon] || 'na';
   }
 
-    _mapDescription(text, isDay = 1) {
-      if (!text) return '';
-      const textmap = {
-        '0': isDay ? _('Sunny') : _('Clear Sky'),     // Clear sky
-        '1': _('Mainly Clear')                        // Mainly clear
-    };
-
-    if (typeof textmap[text] !== 'undefined') {
-      return textmap[text]; // Return the specifically translated version
-    }
-    return _(text); // Return the generally translated version
+  _mapDescription(text, isDay = true) {
+    if (!text) return '';
+    return TEXT_MAPPINGS[text]?.(isDay) || _(text);
   }
-
 
 };
