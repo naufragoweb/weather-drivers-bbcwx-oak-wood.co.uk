@@ -146,7 +146,7 @@ I will detail all the changes I made to make the code simpler and more compact, 
 
 11. The entire function of determining the correct day for forecasts has been revised and simplified. Since the API does not provide well-organized data, the code section has been commented to clarify possible future interventions.
 
-All these changes kept exactly the same same original functionality, but resulted in approximately 30% smaller code that is much easier to maintain and understand.
+All these changes kept exactly the same same original functionality, but resulted in approximately 50% smaller code that is much easier to maintain and understand.
 
 --------------------------------------------------------------------------------
 
