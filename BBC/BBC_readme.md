@@ -1,4 +1,4 @@
-**Implementing BBC Weather Driver:**
+# Implementing BBC Weather Driver
 
 ![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx1.png)
 
@@ -157,9 +157,15 @@ I will detail all the changes I made to make the code simpler and more compact, 
 
 * Removed obvious comments (code explains itself)
 
-All these changes kept exactly the same same original functionality, but resulted in approximately 30% smaller code that is much easier to maintain and understand.
-
 11. Fixed name of days.
+
+12. Modification to the async/await function to use Promises All to speed up the process of assigning data to display objects.
+
+* Separating data parsing into separate functions to run together.
+
+![Promisse All](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image10.png)
+
+All these changes kept exactly the same same original functionality, but resulted in approximately 30% smaller code that is much easier to maintain and understand.
 
 --------------------------------------------------------------------------------
 
