@@ -1,4 +1,8 @@
-Refactoring National Weather Service driver
+# Refactoring National Weather Service driver
+
+![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx3.png)
+
+![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx4.png)
 
 🔍 API Context:
 
@@ -52,6 +56,98 @@ Another characteristic is the total lack of a standard in data distribution. Dep
         ** Total reduction in error screen time (between updates);
         ** Smooth transition between updates;
         
+--------------------------------------------------------------------------------
+Update 2025-05-29 (Refatored Code)
+
+I will detail all the changes I made to make the code simpler and more compact, while maintaining the same functionality:
+1. Organization and Constants
+
+* Consolidation of constants: I grouped all the constants at the beginning of the file for better visibility:
+
+![Consolidation of constants](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image1.png)
+
+* Centralized mappings: I created constant objects for icon and text mappings:
+
+![Centralized mappings](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image2.png)
+
+2. Simplifying Methods
+
+* _emptyData(): I replaced the manual initialization with a more compact structure:
+
+![emptyData](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image3.png)
+
+* refreshData():
+
+    I used Promise.all to load the data in parallel;
+
+    I simplified the error handling logic;
+
+3. Helper Improvements
+
+* _getWeatherAsync(): Made more concise:
+
+![getWeatherAsync](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image4.png)
+
+* _mapIcon() and _mapDescription(): Simplified using mapping objects:
+
+![Mapping Objects](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image5.png)
+
+4. Simplified Status Handling
+
+* I've consolidated status updates into more straightforward operations:
+
+![Status Handling](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image6.png)
+
+5. ES6+ (ECMAScript 6) Syntax Improvements
+
+* Destructuring assignment:
+
+![Destructuring assignment](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image7.png)
+
+* Ternary operators:
+
+![Ternary operator](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image8.png)
+
+* Optional chaining:
+
+![Chaining](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image9.png)
+
+6. Reduced Repetitive Code
+
+* Eliminated similar methods (_params and _params0) by consolidating them into conditional logic;
+
+* Replaced for loops with array methods like slice() and fill();
+
+7. Consistent Naming
+
+* Standardized method names to camelCase (_parseLocation instead of _parse_location);
+
+* Kept the underscore prefix convention for private methods;
+
+8. Unified Error Handling
+
+* Created a consistent pattern for error handling across all asynchronous operations;
+
+* Simplified updating of error state;
+
+9. Operational Efficiency
+
+* Parallelized requests with Promise.all;
+
+* Reduced unnecessary copy and assignment operations;
+
+10. Improved Readability
+
+* Shortened complex conditional blocks;
+
+* Used Object.assign for multiple assignments;
+
+* Removed obvious comments (code explains itself)
+
+11. The entire function of determining the correct day for forecasts has been revised and simplified. Since the API does not provide well-organized data, the code section has been commented to clarify possible future interventions.
+
+All these changes kept exactly the same same original functionality, but resulted in approximately 30% smaller code that is much easier to maintain and understand.
+
 --------------------------------------------------------------------------------
 
 Update 2025-05-28
