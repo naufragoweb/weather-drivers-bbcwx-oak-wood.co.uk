@@ -1,4 +1,5 @@
 // National Weather Service Driver JSON API 2.5.1 - Refactored Version
+// Created using ECMAScript 6 standart
 
 const UUID = 'bbcwx@oak-wood.co.uk';
 const DESKLET_DIR = imports.ui.deskletManager.deskletMeta[UUID].path;
@@ -13,29 +14,6 @@ const MAX_DAYS = 7;
 Gettext.bindtextdomain(UUID, `${GLib.get_home_dir()}/.local/share/locale`);
 const _ = str => str ? Gettext.dgettext(UUID, str) || Gettext.dgettext('cinnamon', str) || str : '';
 
-const ICON_MAPPINGS = {
-  day: {
-    'skc': '32', 'few': '34', 'sct': '30', 'bkn': '28', 'ovc': '26d',
-    'wind_skc': '32', 'wind_few': '34', 'wind_sct': '30', 'wind_bkn': '28',
-    'wind_ovc': '26d', 'snow': '14', 'rain_snow': '15', 'rain_sleet': '06',
-    'snow_sleet': '07', 'fzra': '10', 'rain_fzra': '10', 'snow_fzra': '10',
-    'sleet': '18', 'rain': '11', 'rain_showers': '12', 'rain_showers_hi': '04',
-    'tsra': '04', 'tsra_sct': '04', 'tsra_hi': '04', 'tornado': '00',
-    'hurricane': '01', 'tropical_storm': '01', 'dust': '19', 'smoke': '19',
-    'haze': '22', 'hot': '36', 'cold': '25', 'blizzard': '15', 'fog': '20'
-  },
-  night: {
-    'skc': '31', 'few': '33', 'sct': '29', 'bkn': '27', 
-    'wind_skc': '31', 'wind_few': '33', 'wind_sct': '29', 'wind_bkn': '27',
-    'haze': '21'
-  }
-};
-
-const TEXT_MAPPINGS = {
-  '0': isDay => isDay ? _('Sunny') : _('Clear Sky'),
-  '1': _('Mainly Clear')
-};
-
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID, version) {
     super(stationID);
@@ -49,12 +27,13 @@ var Driver = class Driver extends wxBase.Driver {
     
     this.drivertype = 'nws';
     this.linkText = 'https://www.weather.gov/';
-    this.linkURL = '';
-    this.locationURL = '';
+    this.linkURL = 'https://forecast.weather.gov/';
     this.baseURL = 'https://api.weather.gov/';
     this.linkIcon = { file: 'nws', width: 50, height: 50 };
 
     this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
+    
+    this.locationURL = '';
   }
 
   _emptyData() {
@@ -87,25 +66,24 @@ var Driver = class Driver extends wxBase.Driver {
         return this._showError(deskletObj, _('Invalid Station ID'));
       }
 
-      const meta = await this._loadMeta();
-      if (!meta) {
-        return this._showError(deskletObj, _('Failed to get location metadata'));
-      }
-
+      let metaURL = `${this.baseURL}points/${this.latlon[0]},${this.latlon[1]}`;
+      const meta = await this._loadData(metaURL, 'meta');
+      if (!meta) return this._showError(deskletObj, _('Failed to get location metadata'));
       await this._parseURLs(meta);
+      
 
-      const obsStationsID = await this._loadObservationStations();
-      if (!obsStationsID) {
-        return this._showError(deskletObj, _('Failed to get observation stations ID'));
-      }
-
+      const obsStationsID = await this._loadData(this.observationURL, 'observation stations');
+      if (!obsStationsID) return this._showError(deskletObj, _('Failed to get observation stations ID'));
       await this._parseObsStation(obsStationsID);
 
+      let params = this._params();
+
+      let lastestURL =`${this.baseURL}/stations/${this.obsStationID}/observations/latest`;
       const [lastest, forecast1h, forecast12h, forecastDaily] = await Promise.all([
-        this._loadLastest(),
-        this._loadForecast1h(),
-        this._loadForecast12h(),
-        this._loadForecastDaily()
+        this._loadData(lastestURL, 'lastest'),
+        this._loadDataWithParams(this.forecast1hURL, 'forecast 1h', params),
+        this._loadDataWithParams(this.forecast12hURL, 'forecast 12h', params),
+        this._loadData(this.forecastDailyURL, 'forecast daily')
       ]);
 
       if (!lastest || !forecast1h || !forecast12h || !forecastDaily) {
@@ -159,26 +137,27 @@ var Driver = class Driver extends wxBase.Driver {
     });
   }
 
-  async _loadMeta() {
+  async _loadData(URL, API) {
     try {
-      const metaURL = `${this.baseURL}points/${this.latlon[0]},${this.latlon[1]}`;
-      const json = JSON.parse(await this._getWeatherAsync(metaURL));
-      
-      if (!json?.id) {
-        this.data.status = { meta: SERVICE_STATUS_ERROR, lasterror: _('Invalid meta data response') };
-        return null;
-      }
-      
-      this.data.status.meta = SERVICE_STATUS_OK;
-      return json;
+      const rawData = await this._getWeatherAsync(URL);
+      const json = JSON.parse(rawData);
+      return json ? json : false;
     } catch (err) {
-      this.data.status = { 
-        meta: SERVICE_STATUS_ERROR, 
-        lasterror: _('Error retrieving metadata: %s').format(err.message) 
-      };
-      return null;
+      global.logError(`NWS: Error loading data ${API}: ${err.message}`);
+      return false;
     }
-  }
+  }  
+
+  async _loadDataWithParams(URL, API, params) {
+    try {
+      const rawData = await this._getWeatherAsync(URL, params);
+      const json = JSON.parse(rawData);
+      return json ? json : false;
+    } catch (err) {
+      global.logError(`NWS: Error loading data ${API}: ${err.message}`);
+      return false;
+    }
+  }  
 
   async _parseURLs(meta) {
     this.observationURL = meta.properties.observationStations;
@@ -188,59 +167,9 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
-  async _loadObservationStations() {
-    try {
-      const json = JSON.parse(await this._getWeatherAsync(this.observationURL));
-      return json?.type ? json : null;
-    } catch (err) {
-      global.logError(`NWS: Error loading observation stations: ${err.message}`);
-      return null;
-    }
-  }
-
   async _parseObsStation(obsStationsID) {
     this.obsStationID = obsStationsID.features[0].properties.stationIdentifier;
     return true;
-  }
-
-  async _loadLastest() {
-    try {
-      const json = JSON.parse(await this._getWeatherAsync(`${this.baseURL}/stations/${this.obsStationID}/observations/latest`));
-      return json?.type ? json : null;
-    } catch (err) {
-      global.logError(`NWS: Error loading latest observations: ${err.message}`);
-      return null;
-    }
-  }
-
-  async _loadForecast1h() {
-    try {
-      const json = JSON.parse(await this._getWeatherAsync(this.forecast1hURL, this._params()));
-      return json?.type ? json : null;
-    } catch (err) {
-      global.logError(`NWS: Error loading 1h forecast: ${err.message}`);
-      return null;
-    }
-  }
-
-  async _loadForecast12h() {
-    try {
-      const json = JSON.parse(await this._getWeatherAsync(this.forecast12hURL, this._params()));
-      return json?.type ? json : null;
-    } catch (err) {
-      global.logError(`NWS: Error loading 12h forecast: ${err.message}`);
-      return null;
-    }
-  }
-
-  async _loadForecastDaily() {
-    try {
-      const json = JSON.parse(await this._getWeatherAsync(this.forecastDailyURL));
-      return json?.type ? json : null;
-    } catch (err) {
-      global.logError(`NWS: Error loading daily forecast: ${err.message}`);
-      return null;
-    }
   }
 
   async _parseMetaData(meta) {
@@ -415,14 +344,34 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   _mapIcon(icon, isDaytime) {
-    return !isDaytime && ICON_MAPPINGS.night[icon] 
-      ? ICON_MAPPINGS.night[icon] 
-      : ICON_MAPPINGS.day[icon] || 'na';
+    const iconMappings = {
+      day: {
+        'skc': '32', 'few': '34', 'sct': '30', 'bkn': '28', 'ovc': '26d',
+        'wind_skc': '32', 'wind_few': '34', 'wind_sct': '30', 'wind_bkn': '28',
+        'wind_ovc': '26d', 'snow': '14', 'rain_snow': '15', 'rain_sleet': '06',
+        'snow_sleet': '07', 'fzra': '10', 'rain_fzra': '10', 'snow_fzra': '10',
+        'sleet': '18', 'rain': '11', 'rain_showers': '12', 'rain_showers_hi': '04',
+        'tsra': '04', 'tsra_sct': '04', 'tsra_hi': '04', 'tornado': '00',
+        'hurricane': '01', 'tropical_storm': '01', 'dust': '19', 'smoke': '19',
+        'haze': '22', 'hot': '36', 'cold': '25', 'blizzard': '15', 'fog': '20'
+      },
+      night: {
+        'skc': '31', 'few': '33', 'sct': '29', 'bkn': '27', 
+        'wind_skc': '31', 'wind_few': '33', 'wind_sct': '29', 'wind_bkn': '27',
+        'haze': '21'
+      }
+    };
+    return !isDaytime && iconMappings.night[icon] 
+      ? iconMappings.night[icon] 
+      : iconMappings.day[icon] || 'na';
   }
 
   _mapDescription(text, isDay = true) {
+    const textMappings = {
+      '0': isDay => isDay ? _('Sunny') : _('Clear Sky'),
+      '1': _('Mainly Clear')
+    };
     if (!text) return '';
-    return TEXT_MAPPINGS[text]?.(isDay) || _(text);
+    return textMappings[text]?.(isDay) || _(text);
   }
-
 };
