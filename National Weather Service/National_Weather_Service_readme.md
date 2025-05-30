@@ -57,6 +57,16 @@ Another characteristic is the total lack of a standard in data distribution. Dep
         ** Smooth transition between updates;
         
 --------------------------------------------------------------------------------
+Update 2025-05-30
+
+1. Code optimization:
+
+* Replacing the load APIs functions with the _loadData and _loadDataWithParams functions;
+
+* Script cleaning and standardization;
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-29 (Refatored Code)
 
 I will detail all the changes I made to make the code simpler and more compact, while maintaining the same functionality:
