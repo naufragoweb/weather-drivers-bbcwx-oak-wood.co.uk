@@ -46,7 +46,7 @@ var Driver = class Driver extends wxBase.Driver {
     this.linkText = 'bbc.co.uk/weather';
     this.linkURL = 'https://www.bbc.com/weather/';
     this.locationURL = 'https://open.live.bbc.co.uk/locator/locations';
-    this.baseURL = 'https://weather-broker-cdn.api.bbci.co.uk/en/';
+    this._baseURL = 'https://weather-broker-cdn.api.bbci.co.uk/en';
     this.linkIcon = { file: 'bbc', width: 120, height: 51 };
     
     this.locationID = '';
@@ -91,9 +91,13 @@ var Driver = class Driver extends wxBase.Driver {
       }
 
       const [current, forecast] = await Promise.all([
-        this._loadCurrent(),
-        this._loadForecast()
-      ]);    
+        this._loadData('observation', 'observations'),
+        this._loadData('forecast/aggregated', 'forecasts')
+      ]); 
+      
+      if (!current || !forecast) {
+        return this._showError(deskletObj, _('Failed to load some weather data'));
+      }
 
       this.linkURL = `https://www.bbc.com/weather/${this.locationID}`;
 
@@ -109,10 +113,19 @@ var Driver = class Driver extends wxBase.Driver {
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
       deskletObj.displayForecast();
+      
     } catch (err) {
       global.logError(`BBC Driver error: ${err.message}`);
       this._showError(deskletObj, _('An unexpected error occurred: %s').format(err.message));
     }
+  }
+
+  _params() {
+    return this.latlon ? { 
+        la: this.latlon[0], 
+        lo: this.latlon[1], 
+        format: 'json' 
+      } : { format: 'json' };
   }
 
   async _verifyStation() {
@@ -122,10 +135,11 @@ var Driver = class Driver extends wxBase.Driver {
     }
     
     if (/^\-?\d+(\.\d+)?,\-?\d+(\.\d+)?$/.test(this.stationID)) {
-      this.latlon = this.stationID.split(',').map(Number);
+      const [lat, lon] = this.stationID.split(',').map(v => parseFloat(v.trim()));
+      this.latlon = [lat, lon];
       this.locationID = '';
     } else {
-      this.latlon = null;
+      this.latlon = [];
       this.locationID = this.stationID;
     }
     return true;
@@ -141,86 +155,26 @@ var Driver = class Driver extends wxBase.Driver {
 
   async _loadMeta() {
     try {
-      const params = this.latlon ? { 
-        la: this.latlon[0], 
-        lo: this.latlon[1], 
-        format: 'json' 
-      } : { format: 'json' };
-      
-      this.localURL = this.latlon ? this.locationURL : `${this.locationURL}/${this.locationID}`;
-      const json = JSON.parse(await this._getWeatherAsync(this.localURL, params));
-      
-      const isValid = this.latlon 
-        ? json?.response?.results?.results?.length > 0
-        : json?.response?.name;
-      
-      if (!isValid) {
-        this.data.status = { 
-          meta: SERVICE_STATUS_ERROR, 
-          lasterror: _('Invalid location metadata response') 
-        };
-        return false;
-      } 
-      this.data.status.meta = SERVICE_STATUS_OK;
-      return json;
+      this.localURL = this.latlon ? `${this.locationURL}` : `${this.locationURL}/${this.locationID}`;
+      const rawData = await this._getWeatherAsync(this.localURL, this._params());
+      const json = JSON.parse(rawData);
+      return json.response ? json : false;
     } catch (err) {
-      this.data.status = { 
-        meta: SERVICE_STATUS_ERROR, 
-        lasterror: _('Error retrieving metadata: %s').format(err.message) 
-      };
+      global.logError(`BBC: Error loading data meta: ${err.message}`);
       return false;
     }
-  }
+  }  
 
-  async _loadCurrent() {
-    if (!this.locationID) {
-      this.data.status = { cc: SERVICE_STATUS_ERROR, lasterror: _('Location ID not available') };
-      return false;
-    }
-    
+  async _loadData(endpoint, API) {
     try {
-      const json = JSON.parse(await this._getWeatherAsync(`${this.baseURL}observation/${this.locationID}`));
-      
-      if (!json?.observations?.length) {
-        this.data.status = { cc: SERVICE_STATUS_ERROR, lasterror: _('Invalid current conditions') };
-        return false;
-      }
-      
-      this.data.status.cc = SERVICE_STATUS_OK;
-      return json;
+      const rawData = await this._getWeatherAsync(`${this._baseURL}/${endpoint}/${this.locationID}`);
+      const json = JSON.parse(rawData);
+      return json ? json : false;
     } catch (err) {
-      this.data.status = { 
-        cc: SERVICE_STATUS_ERROR, 
-        lasterror: _('Error retrieving current data: %s').format(err.message) 
-      };
+      global.logError(`BBC: Error loading data ${API}: ${err.message}`);
       return false;
     }
-  }
-
-  async _loadForecast() {
-    if (!this.locationID) {
-      this.data.status = { forecast: SERVICE_STATUS_ERROR, lasterror: _('Location ID not available') };
-      return false;
-    }
-    
-    try {
-      const json = JSON.parse(await this._getWeatherAsync(`${this.baseURL}forecast/aggregated/${this.locationID}`));
-      
-      if (!json?.forecasts?.length) {
-        this.data.status = { forecast: SERVICE_STATUS_ERROR, lasterror: _('Invalid forecast response') };
-        return false;
-      }
-      
-      this.data.status.forecast = SERVICE_STATUS_OK;
-      return json;
-    } catch (err) {
-      this.data.status = { 
-        forecast: SERVICE_STATUS_ERROR, 
-        lasterror: _('Error retrieving forecast: %s').format(err.message) 
-      };
-      return false;
-    }
-  }
+  }  
 
   async _parseLocation(meta) {
     this.locationID = meta.response.results.results[0].id;
@@ -275,10 +229,9 @@ var Driver = class Driver extends wxBase.Driver {
   async _parseForecastData(forecast) {
     try {
         const isNight = forecast.isNight === true;
-        const firstForecastDayReport = forecast.forecasts[0].summary.report;
-        const firstForecastDayDetailed = forecast.forecasts[0].detailed.reports[0];
-        const baseLocalDateString = firstForecastDayReport.localDate || firstForecastDayDetailed.localDate;
-        const baseDayOfWeek = new Date(baseLocalDateString).getUTCDay();
+        const localDate = forecast.forecasts[0].summary.report.localDate || 
+        forecast.forecasts[0].detailed.reports[0].localDate;
+        const baseDayOfWeek = new Date(localDate).getUTCDay();
         
         forecast.forecasts.slice(0, this.maxDays).forEach((dayData, i) => {
           const sum = dayData.summary.report;
