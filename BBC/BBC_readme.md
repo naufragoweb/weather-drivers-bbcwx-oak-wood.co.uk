@@ -79,7 +79,7 @@ Update 2025-05-30
 
 * Replacing the _loadCurrent and _loadForecast functions with the _loadData function;
 
-* Optimization of the _loadMeta function;
+* Replacing the _loadMeta function with the _loadDataWithParams function;
 
 * Script cleaning and standardization;
 
