@@ -60,7 +60,9 @@ Another characteristic is the total lack of a standard in data distribution. Dep
 
 Update 2025-05-31
 
-* Reverted _mapIcon to previous version where comments were recovered.
+* Reverted _mapIcon to previous version where comments were recovered;
+
+* Created description list of texts provided in NWS API (_mapDescription);
 
 --------------------------------------------------------------------------------
 
