@@ -246,14 +246,51 @@ var Driver = class Driver extends wxBase.Driver {
   _mapIcon(icon, isNight) {
     const iconMappings = {
       day: {
-        '1': '32', '2': '30', '3': '30', '4': '23', '5': '20', '6': '20', '7': '26', '8': '26d',
-        '10': '11', '11': '09', '12': '11', '14': '12', '15': '12', '17': '18', '18': '18',
-        '20': '18', '21': '18', '23': '13', '24': '13', '26': '16', '27': '16', '29': '04',
-        '30': '04', '31': '01', '32': '20', '33': '15', '34': '08', '35': '23', '36': '26', '39': '11'
+        '1': '32',  // Sunny
+        '2': '30',  // Partly Cloudy
+        '3': '30',  // Sunny Intervals
+        '4': '23',  // Sandstorm
+        '5': '20',  // Mist
+        '6': '20',  // Fog
+        '7': '26',  // Light Cloud
+        '8': '26d', // Thick Cloud
+        '10': '11', // Light Rain Showers (day)
+        '11': '09', // Drizzle
+        '12': '11', // Light Rain
+        '14': '12', // Heavy Rain Showers (day)
+        '15': '12', // Heavy Rain
+        '17': '18', // Sleet Showers (day)
+        '18': '18', // Sleet
+        '20': '18', // Hail Showers (day)
+        '21': '18', // Hail
+        '23': '13', // Light Snow Showers (day)
+        '24': '13', // Light Snow
+        '26': '16', // Heavy Snow Showers (day)
+        '27': '16', // Heavy Snow
+        '29': '04', // Thundery Showers (day)
+        '30': '04', // Thunderstorms
+        '31': '01', // Tropical storm
+        '32': '20', // Hazy
+        '33': '15', // Blowing Snow
+        '34': '08', // Freezing Drizzle
+        '35': '23', // Sandstorm
+        '36': '26', // Light Cloud
+        //'37': '16',  //Heavy Snow Showers (???)
+        //'38': '', // (???)
+        '39': '11'   // Light Rain
       },
       night: {
-        '0': '31', '1': '31', '2': '29', '3': '29', '9': '11', '13': '12', '16': '18',
-        '19': '18', '22': '46', '25': '16', '28': '04'
+        '0': '31',  // Clear Sky
+        '1': '31',  // Sunny
+        '2': '29',  // Partly Cloudy
+        '3': '29',  // Sunny Intervals
+        '9': '11',  // Light Rain Showers (night)
+        '13': '12', // Heavy Rain showers (night)
+        '16': '18', // Sleet Showers (night)
+        '19': '18', // Hail Showers (night)
+        '22': '46', // Light Snow Showers (night)
+        '25': '16', // Heavy Snow Showers (night)
+        '28': '04'  // Thundery Showers (night)
       }
     };
 
@@ -264,12 +301,13 @@ var Driver = class Driver extends wxBase.Driver {
 
   _mapDescription(code) {
     const textMappings = {
-      'Sandstorm': _('Sand Storm'),
-      'Light Rain Showers': _('Light Rain Shower'),
-      'Heavy Rain Showers': _('Heavy Rain Shower'),
-      'Sleet Showers': _('Sleet Shower'),
-      'Hail Showers': _('Hail Shower'),
-      'Thundery Showers': _('Thundery Shower')
+      'Sandstorm'         : _('Sand Storm'),
+      'Light Rain Showers': _('Light Rain Showers'),
+      'Heavy Rain Showers': _('Heavy Rain Showers'),
+      'Light Rain Showers': _('Light Rain Showers'),
+      'Sleet Showers'     : _('Sleet Shower'),
+      'Hail Showers'      : _('Hail Shower'),
+      'Thundery Showers'  : _('Thundery Shower')
     };
     return code ? textMappings[code] || _(code) : '';
   }
