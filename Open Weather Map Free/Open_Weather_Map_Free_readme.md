@@ -47,6 +47,12 @@ Problems found:
         
 --------------------------------------------------------------------------------
 
+Update 2025-05-31
+
+*  Reverted _mapIcon and _getWeatherPriority to previous version where comments were recovered.
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-30 (Refatored Code):
 
 1. Organization and Constants
