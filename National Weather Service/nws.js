@@ -346,19 +346,51 @@ var Driver = class Driver extends wxBase.Driver {
   _mapIcon(icon, isDaytime) {
     const iconMappings = {
       day: {
-        'skc': '32', 'few': '34', 'sct': '30', 'bkn': '28', 'ovc': '26d',
-        'wind_skc': '32', 'wind_few': '34', 'wind_sct': '30', 'wind_bkn': '28',
-        'wind_ovc': '26d', 'snow': '14', 'rain_snow': '15', 'rain_sleet': '06',
-        'snow_sleet': '07', 'fzra': '10', 'rain_fzra': '10', 'snow_fzra': '10',
-        'sleet': '18', 'rain': '11', 'rain_showers': '12', 'rain_showers_hi': '04',
-        'tsra': '04', 'tsra_sct': '04', 'tsra_hi': '04', 'tornado': '00',
-        'hurricane': '01', 'tropical_storm': '01', 'dust': '19', 'smoke': '19',
-        'haze': '22', 'hot': '36', 'cold': '25', 'blizzard': '15', 'fog': '20'
+        'skc': '32',              // (Fair/clear)                         (Sunny)
+        'few': '34',              // (A few clouds)                       (Few clouds)
+        'sct': '30',              // (Partly cloudy)                      (Partly cloudy)
+        'bkn': '28',              // (Mostly cloudy)                      (Mostly cloudy)
+        'ovc': '26d',             // (Overcast)                           (Overcast)
+        'wind_skc': '32',         // (Fair/clear and windy)               (Sunny/Clear)
+        'wind_few': '34',         // (A few clouds and windy)             (Few clouds)
+        'wind_sct': '30',         // (Partly cloudy and windy)            (Partly cloudy)
+        'wind_bkn': '28',         // (Mostly cloudy and windy)            (Mostly cloudy)
+        'wind_ovc': '26d',        // (Overcast and windy)                 (Overcast)
+        'snow': '14',             // (Snow)                               (Snow)
+        'rain_snow': '15',        // (Rain and snow)                      (Rain and snow)
+        'rain_sleet': '06',       // (Rain and sleet)                     (Rain and sleet)
+        'snow_sleet': '07',       // (Snow and sleet)                     (Snow and sleet)
+        'fzra': '10',             // (Freezing rain)                      (Freezing rain)
+        'rain_fzra': '10',        // (Rain/freezing rain)                 (Rain and freezing rain)
+        'snow_fzra': '10',        // (Freezing rain/snow)                 (Snow and freezing rain)
+        'sleet': '18',            // (Sleet)                              (Sleet)
+        'rain': '11',             // (Rain)                               (Rain)
+        'rain_showers': '12',     // (Rain showers (high cloud cover))    (Rain showers)
+        'rain_showers_hi': '04',  // (Rain showers (low cloud cover))     (Rain showers)
+        'tsra': '04',             // (Thunderstorm (high cloud cover))    (Thunderstorm)
+        'tsra_sct': '04',         // (Thunderstorm (medium cloud cover))  (Thunderstorm)
+        'tsra_hi': '04',          // (Thunderstorm (low cloud cover))     (Thunderstorm)
+        'tornado': '00',          // (Tornado)                            (Tornado)
+        'hurricane': '01',        // (Hurricane conditions)               (Hurricane)
+        'tropical_storm': '01',   // (Tropical storm conditions)          (Tropical storm)
+        'dust': '19',             // (Dust)                               (Dust)
+        'smoke': '19',            // (Smoke)                              (Smoke)
+        'haze': '22',             // (Haze)                               (Haze)
+        'hot': '36',              // (Hot)                                (Hot)
+        'cold': '25',             // (Cold)                               (Cold)
+        'blizzard': '15',         // (Blizzard)                           (Blizzard)
+        'fog': '20'               // (Fog/mist)                           (Fog)
       },
       night: {
-        'skc': '31', 'few': '33', 'sct': '29', 'bkn': '27', 
-        'wind_skc': '31', 'wind_few': '33', 'wind_sct': '29', 'wind_bkn': '27',
-        'haze': '21'
+        'skc': '31',        // Clear Sky
+        'few': '33',        // Few clouds
+        'sct': '29',        // Partly cloudy
+        'bkn': '27',        // Mostly cloudy
+        'wind_skc': '31',   // Clear Sky
+        'wind_few': '33',   // Few clouds
+        'wind_sct': '29',   // Partly cloudy
+        'wind_bkn': '27',   // Mostly cloudy
+        'haze': '21',       // Haze
       }
     };
     return !isDaytime && iconMappings.night[icon] 
