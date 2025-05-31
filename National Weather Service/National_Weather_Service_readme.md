@@ -57,6 +57,13 @@ Another characteristic is the total lack of a standard in data distribution. Dep
         ** Smooth transition between updates;
         
 --------------------------------------------------------------------------------
+
+Update 2025-05-31
+
+* Reverted _mapIcon to previous version where comments were recovered.
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-30
 
 1. Code optimization:
