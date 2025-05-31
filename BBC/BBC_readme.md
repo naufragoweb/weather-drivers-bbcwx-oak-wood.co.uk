@@ -71,6 +71,12 @@ The BBC Weather Service uses 3 complementary APIs:
 
 --------------------------------------------------------------------------------
 
+Update 2025-05-31
+
+* Reverted _mapIcon to previous version where comments were recovered.
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-30
 
 1. Code optimization:
