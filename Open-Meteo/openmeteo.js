@@ -1,4 +1,5 @@
 // Open-Meteo Non-comercial Weather Driver JSON API (Refatored)
+// Created using ECMAScript 6 standart
 
 const UUID = 'bbcwx@oak-wood.co.uk';
 const DESKLET_DIR = imports.ui.deskletManager.deskletMeta[UUID].path;
@@ -7,151 +8,111 @@ const wxBase = imports.wxbase;
 const GLib = imports.gi.GLib;
 const Gettext = imports.gettext;
 
-const SERVICE_STATUS_ERROR = wxBase.SERVICE_STATUS_ERROR;
-const SERVICE_STATUS_OK = wxBase.SERVICE_STATUS_OK;
-const SERVICE_STATUS_INIT = wxBase.SERVICE_STATUS_INIT;
+const { SERVICE_STATUS_ERROR, SERVICE_STATUS_OK, SERVICE_STATUS_INIT } = wxBase;
+const MAX_DAYS = 7;
 
-const OPENMETEO_DRIVER_MAX_DAYS = 7; // Constant for the number of Open-Meteo days
-
-//Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
+Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
 
 function _(str) {
-  return Gettext.dgettext(UUID, str);
+  return str ? Gettext.dgettext(UUID, str) || Gettext.dgettext('cinnamon', str) || str : '';
 }
 
 var Driver = class Driver extends wxBase.Driver {
   // initialize the driver
-  constructor(stationID) {
+  constructor(stationID, version) {
     super(stationID);
+    this.version = version;
     
     this.capabilities.cc.visibility = false;
 
     this.drivertype = 'Open-Meteo';
-    this.maxDays = 7;
+    this.maxDays = MAX_DAYS;
     this.linkText = 'Open-Meteo';
     this._baseURL = `https://api.open-meteo.com/v1/forecast`;
-    this._locationURL = `https://geocode.xyz/`;
+    this._locationURL = `https://nominatim.openstreetmap.org/reverse`;
+    this.linkIcon = { file: 'openmeteo', width: 120, height: 36};
 
-    this.linkIcon = {
-        file: 'openmeteo',
-        width: 120,
-        height: 36
-    };
+    this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
 
     this.latitude = '';
     this.longitude = '';
   }
 
-  // Override _emptyData from wxbase.js to avoid race conditions
-  // when initializing this.data.days.
   _emptyData() {
-    // Initializes the metadata parts of this.data
-    this.data.city = '';
-    this.data.country = '';
-    this.data.region = '';
-    this.data.wgs84 = new Object();
-    this.data.wgs84.lat = '';
-    this.data.wgs84.lon = '';
-
-    // Initializes the current conditions (cc) object
-    this.data.cc = new Object();
-    this.data.cc.feelslike = '';
-    this.data.cc.has_temp = false;
-    this.data.cc.humidity = '';
-    this.data.cc.icon = '';
-    this.data.cc.pressure = '';
-    this.data.cc.temperature = '';
-    this.data.cc.weathertext = '';
-    this.data.cc.wind_direction = '';
-    this.data.cc.wind_speed = '';
-
-    // Constructs a new array and assigns it atomically.
-    this.data.days = [];
-    
-    // Use the constant OWMFREE_DRIVER_MAX_DAYS to ensure the array is always the correct size for BBC,
-    // regardless of the value of this.maxDays during the call to super() in the constructor.
-    // This ensures that the array is always the correct size, regardless of the original this.maxDays value in wxbase.
-    for (let i = 0; i < OPENMETEO_DRIVER_MAX_DAYS; i++) {
-      this.data.days[i] = {
-        day: '',
-        humidity: '',
-        icon: '',
-        maximum_temperature: '',
-        minimum_temperature: '',
-        pressure: '',
-        weathertext: '',
-        wind_direction: '',
-        wind_speed: ''
-      };
-    }
+    this.data = {
+      city: '', country: '', region: '',
+      wgs84: { lat: '', lon: '' },
+      cc: {
+        feelslike: '', has_temp: false, humidity: '', icon: '', pressure: '',
+        temperature: '', weathertext: '', wind_direction: '', wind_speed: ''
+      },
+      days: Array(MAX_DAYS).fill().map(() => ({
+        day: '', humidity: '', icon: '', maximum_temperature: '', minimum_temperature: '',
+        pressure: '', weathertext: '', wind_direction: '', wind_speed: ''
+      })),
+      status: {}
+    };
   }
 
   async refreshData(deskletObj) {
-
-    // reset the services object at the beginning of refreshData
-    this.data.status = {};
-    this.data.status.cc = SERVICE_STATUS_INIT;
-    this.data.status.forecast = SERVICE_STATUS_INIT;
-    this.data.status.meta = SERVICE_STATUS_INIT;
-    this.data.status.lasterror = false;
-
-    // Execute script synchronously
     try {
+      this.data.status = {
+        cc: SERVICE_STATUS_INIT, 
+        forecast: SERVICE_STATUS_INIT, 
+        meta: SERVICE_STATUS_INIT, 
+        lasterror: false
+      };
 
-      // Check user input for stationID
-      if (!await this._verify_station()) {
+      if (!await this._verifyStation()) {
         return this._showError(deskletObj, _('Invalid Station ID'));
       }
 
-      // Fetch API for data (current and 7 days forecast)
-      const forecasts = await this._load_forecasts();
-      if (!forecasts) {
-        return this._showError(deskletObj, _('Failed to get forecast data'));
-      }
+      const forecast = await this._loadDataWithParams(this._baseURL, 'forecast', this._paramsData());
+      if (!forecast) return this._showError(deskletObj, _('Failed to load forecast data'));
+      await this._parseLocation(forecast);
 
-      await this._parse_location(forecasts);
-
-      // Fetch API for location (meta data)
-      const meta = await this._load_meta();
-      if (!meta) {
-        return this._showError(deskletObj, _('Failed to get location metadata'));
-      } 
+      const meta = await this._loadDataWithParams(this._locationURL, 'meta', this._paramsGeocode());
+      if (!meta) return this._showError(deskletObj, _('Failed to load meta data'));
 
       this._emptyData();
 
-      // Load data in objects to display
-      await this._parse_data(meta, forecasts);
+      await Promise.all([
+        this._parseMetaData(meta, forecast),
+        this._parseCurrentData(forecast),
+        this._parseForecastData(forecast)
+      ]);
 
-      // Display data in the desklet
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
       deskletObj.displayForecast();
 
       return true;
-
+      
     } catch (err) {
-      global.logError(`Open-Meteo Driver refreshData error: ${err.message}`);
+      global.logError(`Open-Meteo: error: ${err.message}`);
       this._showError(deskletObj, _('An unexpected error occurred: %s').format(err.message));
     }
   }
 
-  _params() {
+  _paramsData() {
     return {
-      'latitude': this.latlon[0],
-      'longitude': this.latlon[1],
-      'current': ['temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'is_day', 'weather_code', 'surface_pressure', 'wind_speed_10m', 'wind_direction_10m'],
-      'daily': ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'wind_speed_10m_max', 'wind_direction_10m_dominant', 'relative_humidity_2m_mean', 'surface_pressure_mean'],
-      'timezone': 'auto'
+      latitude: this.latlon[0],
+      longitude: this.latlon[1],
+      current: ['temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'is_day', 'weather_code', 'surface_pressure', 'wind_speed_10m', 'wind_direction_10m'],
+      daily: ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'wind_speed_10m_max', 'wind_direction_10m_dominant', 'relative_humidity_2m_mean', 'surface_pressure_mean'],
+      timezone: 'auto'
     };
   }
 
-  _params0() {
+  _paramsGeocode() {
     return {
-      'geoit': 'json'
+      lat: this.latitude,
+      lon: this.longitude,
+      format: 'json'
     };
   }
 
-  async _verify_station() {
+  async _verifyStation() {
     if (!this.stationID || typeof this.stationID !== 'string') {
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Station ID not defined');
@@ -164,132 +125,59 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
-  async _getWeatherAsync(url, params = null) {
-    // Apply delay ONLY if it is the geocode API (one requisition per second)
-    if (url.includes('geocode.xyz')) {
-        const now = Date.now();
-        if (now - this._lastGeocodeCall < 1000) {
-            await new Promise(resolve => setTimeout(resolve, 1000 - (now - this._lastGeocodeCall)));
-        }
-        this._lastGeocodeCall = now;
-    }
-    // Call getWeather
+   _getWeatherAsync(url, params = null) {
     return new Promise((resolve, reject) => {
-      this._getWeather(url, (weather) => {
-        if (weather) {
-          resolve(weather);
-        } else {
-          const error = new Error(`Failed to retrieve data from ${url}. Response was empty or indicated failure.`);
-          reject(error);
-        }
-      }, params); 
+      this._getWeather(url, weather => 
+        weather ? resolve(weather) : reject(new Error(`Failed to retrieve data from ${url}`))
+      , params, this.userAgent);
     });
   }
 
-   async _load_forecasts() {
-    let params = this._params();
+  async _loadDataWithParams(URL, API, params) {
     try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(this._baseURL, params);
-
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json.latitude || json.latitude.length === 0) {
-          this.data.status.cc = SERVICE_STATUS_ERROR;
-          this.data.status.forecast = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid forecast response');
-          return null;
-        }
-      this.data.status.cc = SERVICE_STATUS_OK;
-      this.data.status.forecast = SERVICE_STATUS_OK;
-      return json;
-      }
+      const rawData = await this._getWeatherAsync(URL, params);
+      const json = JSON.parse(rawData);
+      return json ? json : false;
     } catch (err) {
-      global.logError(`Open-Meteo Driver: _load_forecast error: ${err.message}`);
-      this.data.status.cc = SERVICE_STATUS_ERROR;
-      this.data.status.forecast = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Error retrieving forecast data: %s').format(err.message);
-      return null;
-    }
-  }
-
-  async _load_meta() {
-
-    let params = this._params0();
-    let metaURL = `${this._locationURL}${this.latitude},${this.longitude}`
-    try {
-      // Use the new async helper
-      const weather = await this._getWeatherAsync(metaURL, params);
-      if (weather) {
-        const json = JSON.parse(weather);
-        // Basic check for expected structure
-        if (!json.city || json.city.length === 0) {
-          this.data.status.meta = SERVICE_STATUS_ERROR;
-          this.data.status.lasterror = _('Invalid current conditions response');
-          return null;
-        }
-        this.data.status.meta = SERVICE_STATUS_OK;
-        return json;
-      }
-    } catch (err) {
-      global.logError(`Open-Meteo Driver: _load_meta error: ${err.message}`);
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Error retrieving current data: %s').format(err.message);
-      return null;
-    }
-  }
-
-  async _parse_location(forecasts) {
-    if (!forecasts) {
-      this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Missing location data');
+      global.logError(`Open-Meteo: Error loading data ${API}: ${err.message}`);
       return false;
     }
-    // Acquire real location from Open Meteo base for identification
-    this.latitude = forecasts.latitude;
-    this.longitude = forecasts.longitude;
+  }  
 
-    this.data.status.meta = SERVICE_STATUS_OK;
+  async _parseLocation(forecast) {
+    try{
+      this.latitude = forecast.latitude;
+      this.longitude = forecast.longitude;
+    } catch (err) {
+      global.logError(`Error parsing location data: ${err.message}`);
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Incomplete location data: %s').format(err.message);
+    }
     return true;
   }
 
-  async _parse_data(meta, forecasts) {
-    if (!meta) {
-        this.data.status.meta = SERVICE_STATUS_ERROR;
-        this.data.status.lasterror = _('Missing meta data');
-        return false;
-    }
-    if (!forecasts) {
-        this.data.status.cc = SERVICE_STATUS_ERROR;
-        this.data.status.forecast = SERVICE_STATUS_ERROR;
-        this.data.status.lasterror = _('Missing current and forecast data');
-        return false;
-    }
-
-    // Meta data
+  async _parseMetaData(meta, forecast) {
     try {
-      this.data.city = meta.city;
-      this.data.region = meta.state;
-      this.data.country = meta.country;
+      this.data.city = meta.address.city;
+      //this.data.region = meta.address.state;
+      this.data.country = meta.address.country;
       this.data.wgs84 = {
-        lat: forecasts.latitude,
-        lon: forecasts.longitude
+        lat: forecast.latitude,
+        lon: forecast.longitude
       };
-
       this.data.status.meta = SERVICE_STATUS_OK;
-    } catch (e) {
-      global.logError(e);
+    } catch (err) {
+      global.logError(`Error parsing meta data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Incomplete location metadata');
-      return false;
+      this.data.status.lasterror = _('Incomplete meta data: %s').format(err.message);
     }
+    return true;
+  }
 
-    const isDay = forecasts.current.is_day == 1;
-
-    // Current conditions data
+  async _parseCurrentData(forecast) {
     try {
-      let current = forecasts.current;
+      const isDay = forecast.current.is_day;
+      let current = forecast.current;
 
       this.data.cc.has_temp = true;
       this.data.cc.temperature = current.temperature_2m;
@@ -298,70 +186,53 @@ var Driver = class Driver extends wxBase.Driver {
       this.data.cc.wind_direction = this.compassDirection(current.wind_direction_10m);
       this.data.cc.humidity = current.relative_humidity_2m;
       this.data.cc.pressure = current.surface_pressure;
-      this.data.cc.weathertext = this._mapDescription(current.weather_code, isDay);
-      this.data.cc.icon = this._mapicon(current.weather_code, isDay);
+      this.data.cc.weathertext = this._mapDescription(String(current.weather_code, isDay));
+      this.data.cc.icon = this._mapIcon(String(current.weather_code, isDay));
 
       this.data.status.cc = SERVICE_STATUS_OK;
-    } catch (e) {
-      global.logError(e);
+    } catch (err) {
+      global.logError(`Error parsing current data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Incomplete current conditions data');
-      return false;
+      this.data.status.lasterror = _('Incomplete current data: %s').format(err.message);
     }
+    return true;
+  }
 
-    // Forecast data
+  async _parseForecastData(forecast) {
     try {
-      let forecast = forecasts.daily;
-      for (let i = 0; i < forecast.time.length; i++) {
+      const isDay = forecast.current.is_day;
+      let forecasts = forecast.daily;
+      for (let i = 0; i < forecasts.time.length; i++) {
         let day = new Object();
-        day.day = this._getDayName(new Date(forecast.time[i]).getUTCDay());
+        day.day = this._getDayName(new Date(forecasts.time[i]).getUTCDay());
 
-        day.maximum_temperature = forecast.temperature_2m_max[i];
-        day.minimum_temperature = forecast.temperature_2m_min[i];
-        day.wind_speed = forecast.wind_speed_10m_max[i];
-        day.wind_direction = this.compassDirection(forecast.wind_direction_10m_dominant[i]);
-        day.weathertext = this._mapDescription(forecast.weather_code[i], i === 0 ? isDay : true);
-        day.icon = this._mapicon(forecast.weather_code[i], i === 0 ? isDay : true);
-        day.humidity = forecast.relative_humidity_2m_mean[i];
-        day.pressure = forecast.surface_pressure_mean[i];
+        day.maximum_temperature = forecasts.temperature_2m_max[i];
+        day.minimum_temperature = forecasts.temperature_2m_min[i];
+        day.wind_speed = forecasts.wind_speed_10m_max[i];
+        day.wind_direction = this.compassDirection(forecasts.wind_direction_10m_dominant[i]);
+        day.weathertext = this._mapDescription(String(forecasts.weather_code[i], i === 0 ? isDay : true));
+        day.icon = this._mapIcon(String(forecasts.weather_code[i], i === 0 ? isDay : true));
+        day.humidity = forecasts.relative_humidity_2m_mean[i];
+        day.pressure = forecasts.surface_pressure_mean[i];
 
         this.data.days[i] = day;
       }
-
       this.data.status.forecast = SERVICE_STATUS_OK;
-      return true;
-    } catch (e) {
-      global.logError(e);
-      this.data.status.forecast = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Incomplete forecast data');
+    } catch (err) {
+      global.logError(`Error parsing forecast data: ${err.message}`);
+      this.data.status.lasterror = _('Incomplete forecast data: %s').format(err.message);
       return false;
     }
+    return true;
   }
 
-// Keeping 'i' as the parameter name, as per the original standard.
-// The 'i' parameter is expected as the direct index of the day of the week,
-// typically 0 for Sunday, 1 for Monday, ..., 6 for Saturday,
-// as returned by Date.prototype.getUTCDay() or Date.prototype.getDay().
-
-// Handles days in Glib format, where Sunday can be 7.
-// Date.prototype.getUTCDay() (used in openmeteo.js) already returns 0 for Sunday,
-// but this check is kept for compatibility in case the function
-// is called with a Glib-style index.
-  _getDayName(i) { 
-    if (i == 7) {
-      i = 0; // Converts Sunday (7) from Glib to Sunday (0) from JS.
-    }
-
-    let days = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ];
-
-    if (i >= 0 && i < days.length) {
-      return days[i]; // Use 'i' directly as index.
-    }
-    global.log(`Open-Meteo: _getDayName received an invalid day index: ${i}`);
-    return ""; // Return to an unexpected index.
+  _getDayName(i) {
+     i = i === 7 ? 0 : i;
+     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+     return days[i] || (global.log(`Invalid day index: ${i}`) && "");
   }
 
-_mapicon(icon, isDay) {
+  _mapIcon(icon, isDay) {
     
     const icons = {
       '0': '32',   // Clear Sky (Sunny)
@@ -396,9 +267,9 @@ _mapicon(icon, isDay) {
 
     const nightIcons = {
       '0': '31',   // Clear Sky'
-      '1': '34',   // Mainly Clear
+      '1': '33',   // Mainly Clear
       '2': '29',   // Partly cloudy
-      '80': '39',  // Rain Showers: Slight 
+      '80': '45',  // Rain Showers: Slight 
       '81': '47',  // Rain Showers: Moderate
       '85': '46',  // Snow Showers: Slight 
       '86': '46'   // Snow Showers: Heavy 
@@ -411,16 +282,16 @@ _mapicon(icon, isDay) {
     iconCode = icons[icon];
     }
 
-    if (!isDay && (typeof nightIcons[icon] !== 'undefined')) {
+    if (!isDay === '0' && (typeof nightIcons[icon] !== 'undefined')) {
     iconCode = nightIcons[icon];
     }
     return iconCode;
   }
 
-    _mapDescription(text, isDay = 1) {
+    _mapDescription(text, isDay = 0) {
       if (!text) return '';
       const textmap = {
-        '0': isDay ? _('Sunny') : _('Clear Sky'),     // Clear sky
+        '0': isDay ? _('Clear Sky') : _('Sunny'),     // Clear sky
         '1': _('Mainly Clear'),                       // Mainly clear
         '2': _('Partly Cloudy'),                      // Partly cloudy
         '3': _('Overcast'),                           // Overcast
