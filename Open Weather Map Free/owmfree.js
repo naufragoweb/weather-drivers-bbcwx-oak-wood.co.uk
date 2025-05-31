@@ -331,16 +331,39 @@ var Driver = class Driver extends wxBase.Driver {
 
   _getWeatherPriority(iconCode) {
   const weatherPriority = {
-    '01d': 2, '02d': 1, '03d': 3, '04d': 4, '09d': 5, '10d': 6, '11d': 7, '13d': 8, '50d': 0
+    '01d': 2,     // Clear Sky
+    '02d': 1,     // Few Clouds
+    '03d': 3,     // Scattered clouds
+    '04d': 4,     // Broken clouds
+    '09d': 5,     // Shower rain
+    '10d': 6,     // Rain
+    '11d': 7,     // Thunderstorm
+    '13d': 8,     // Snow
+    '50d': 0,     // Mist
   };
   return weatherPriority[iconCode] ?? 'na'; // Fallback: 'na' icon
 }
 
   _mapIcon(icon) {
     const iconMappings = {
-      '01d': '32', '01n': '31', '02d': '34', '02n': '33', '03d': '28', '03n': '27', 
-      '04d': '26', '04n': '26', '09d': '39', '09n': '45', '10d': '12', '10n': '12', 
-      '11d': '04', '11n': '04', '13d': '16', '13n': '16', '50d': '20', '50n': '20'
+      '01d': '32',  // clear sky day
+      '01n': '31',  // clear sky night
+      '02d': '34',  // few clouds day
+      '02n': '33',  // few clouds night
+      '03d': '28',  // scattered clouds
+      '03n': '27',  // scattered clouds
+      '04d': '26',  // broken clouds day
+      '04n': '26',  // broken clouds night
+      '09d': '39',  // shower rain day
+      '09n': '45',  // shower rain night
+      '10d': '12',  // rain day
+      '10n': '12',  // rain night
+      '11d': '04',  // thunderstorm day
+      '11n': '04',  // thunderstorm night
+      '13d': '16',  // snow day
+      '13n': '16',  // snow night
+      '50d': '20',  // mist day
+      '50n': '20'   // mist night
     };
     return iconMappings[icon] || 'na';
   }
