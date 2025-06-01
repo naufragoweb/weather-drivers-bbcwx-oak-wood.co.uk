@@ -33,9 +33,14 @@ var Driver = class Driver extends wxBase.Driver {
     this.linkIcon = { file: 'openmeteo', width: 120, height: 36};
 
     this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
-
+    this.data = new Object();
+    this._emptyData();
+    this.isRefreshing = false;
+    
     this.latitude = '';
     this.longitude = '';
+    this.latlon = [];
+
   }
 
   _emptyData() {
@@ -55,6 +60,11 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async refreshData(deskletObj) {
+    
+    if (!await this._verifyStation()) {
+      this._showError(deskletObj, _(this.data.status.lasterror));
+      return;
+    }
     try {
       this.data.status = {
         cc: SERVICE_STATUS_INIT, 
@@ -62,16 +72,12 @@ var Driver = class Driver extends wxBase.Driver {
         meta: SERVICE_STATUS_INIT, 
         lasterror: false
       };
-
-      if (!await this._verifyStation()) {
-        return this._showError(deskletObj, _('Invalid Station ID'));
-      }
-
-      const forecast = await this._loadDataWithParams(this._baseURL, 'forecast', this._paramsData());
+      
+      let forecast = await this._loadDataWithParams(this._baseURL, 'forecast', this._paramsData());
       if (!forecast) return this._showError(deskletObj, _('Failed to load forecast data'));
       await this._parseLocation(forecast);
 
-      const meta = await this._loadDataWithParams(this._locationURL, 'meta', this._paramsGeocode());
+      let meta = await this._loadDataWithParams(this._locationURL, 'meta', this._paramsGeocode());
       if (!meta) return this._showError(deskletObj, _('Failed to load meta data'));
 
       this._emptyData();
@@ -87,7 +93,6 @@ var Driver = class Driver extends wxBase.Driver {
       deskletObj.displayForecast();
 
       return true;
-      
     } catch (err) {
       global.logError(`Open-Meteo: error: ${err.message}`);
       this._showError(deskletObj, _('An unexpected error occurred: %s').format(err.message));
@@ -113,15 +118,38 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async _verifyStation() {
-    if (!this.stationID || typeof this.stationID !== 'string') {
+    if (!this.stationID || typeof this.stationID !== 'string' || this.stationID.trim() === "") {
+      this._emptyData();
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Station ID not defined');
+      this.data.status.lasterror = _('Station ID\nis empty or not defined.');
+      this.latlon = [];
+      
       return false;
     }
-    if (/^\-?\d+(\.\d+)?,\-?\d+(\.\d+)?$/.test(this.stationID)) {
-      const [lat, lon] = this.stationID.split(',').map(v => parseFloat(v.trim()));
-      this.latlon = [lat, lon];
-    } 
+   // Regex to strictly match the format "lat,lon", allowing spaces around the comma.
+    const latLon = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
+    const match = this.stationID.match(latLon);
+
+    if (!match) {
+      this._emptyData();
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Invalid ID format.\nExpected: latitude,longitude\n(e.g., 40.71,-74.01)');
+      this.latlon = null;
+      return false;
+    }
+
+    const lat = parseFloat(match[1]);
+    const lon = parseFloat(match[2]);
+
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      this._emptyData();
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Invalid latitude or longitude\nvalues in Station ID.');
+      this.latlon = null;
+      return false;
+    }
+
+    this.latlon = [lat, lon];
     return true;
   }
 
@@ -137,7 +165,8 @@ var Driver = class Driver extends wxBase.Driver {
     try {
       const rawData = await this._getWeatherAsync(URL, params);
       const json = JSON.parse(rawData);
-      return json ? json : false;
+      if (URL.includes(this._locationURL)) return json.type ? json : false;
+      if (URL.includes(this._baseURL)) return json.latitude ? json : false;
     } catch (err) {
       global.logError(`Open-Meteo: Error loading data ${API}: ${err.message}`);
       return false;
@@ -165,13 +194,16 @@ var Driver = class Driver extends wxBase.Driver {
         lat: forecast.latitude,
         lon: forecast.longitude
       };
+      if (!this.data.city || !this.data.country) {
+        this.data.status.meta = SERVICE_STATUS_ERROR;
+        return false;
+        }
       this.data.status.meta = SERVICE_STATUS_OK;
     } catch (err) {
       global.logError(`Error parsing meta data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = _('Incomplete meta data: %s').format(err.message);
     }
-    return true;
   }
 
   async _parseCurrentData(forecast) {
