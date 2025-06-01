@@ -54,17 +54,19 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async refreshData(deskletObj) {
-    this.data.status = {
-      cc: SERVICE_STATUS_INIT,
-      forecast: SERVICE_STATUS_INIT,
-      meta: SERVICE_STATUS_INIT,
-      lasterror: false
-    };
-
+    
+    if (!await this._verifyStation()) {
+      this._showError(deskletObj, _(this.data.status.lasterror));
+      return;
+    }
     try {
-      if (!await this._verifyStation()) {
-        return this._showError(deskletObj, _('Invalid Station ID'));
-      }
+
+      this.data.status = {
+        cc: SERVICE_STATUS_INIT,
+        forecast: SERVICE_STATUS_INIT,
+        meta: SERVICE_STATUS_INIT,
+        lasterror: false
+      };
 
       let metaURL = `${this.baseURL}points/${this.latlon[0]},${this.latlon[1]}`;
       const meta = await this._loadData(metaURL, 'meta');
@@ -118,14 +120,38 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async _verifyStation() {
-    if (!this.stationID || typeof this.stationID !== 'string') {
-      this.data.status = { meta: SERVICE_STATUS_ERROR, lasterror: _('Station ID not defined') };
+    if (!this.stationID || typeof this.stationID !== 'string' || this.stationID.trim() === "") {
+      this._emptyData();
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Location\nis empty or not defined.');
+      this.latlon = [];
+      
       return false;
     }
-    
-    if (/^\-?\d+(\.\d+)?,\-?\d+(\.\d+)?$/.test(this.stationID)) {
-      this.latlon = this.stationID.split(',').map(Number);
+   // Regex to strictly match the format "lat,lon", allowing spaces around the comma.
+    const latLon = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
+    const match = this.stationID.match(latLon);
+
+    if (!match) {
+      this._emptyData();
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Invalid Location format.\nExpected: latitude,longitude\n(e.g., 40.71,-74.01)');
+      this.latlon = null;
+      return false;
     }
+
+    const lat = parseFloat(match[1]);
+    const lon = parseFloat(match[2]);
+
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      this._emptyData();
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Invalid latitude or longitude\nvalues in Location.');
+      this.latlon = null;
+      return false;
+    }
+
+    this.latlon = [lat, lon];
     return true;
   }
 
@@ -282,7 +308,7 @@ var Driver = class Driver extends wxBase.Driver {
 
       // --- Processing forecast days (1 to maxDays-1) ---
       for (let i = 1; i < this.maxDays; i++) {
-        this.data.days[i].day = this._getDayName(i);
+        Object.assign(this.data.days[i].day = this._getDayName(i));
 
         // Calculates the target local date for day 'i'
         const targetLocalDate = new Date(new Date(periods12h[0].startTime));
@@ -307,22 +333,24 @@ var Driver = class Driver extends wxBase.Driver {
         });
 
         if (periodForDay) {
-          this.data.days[i].icon = this._mapIcon(periodForDay.icon.split('?')[0].split('/').pop().split(',')[0], true);
-          this.data.days[i].weathertext = this._mapDescription(periodForDay.shortForecast, true);
-          this.data.days[i].wind_speed = periodForDay.windSpeed.match(/\d+/) ? Number(periodForDay.windSpeed.match(/\d+/)[0]) : '';
-          this.data.days[i].wind_direction = periodForDay.windDirection ?? '';
+          Object.assign(this.data.days[i], {
+          icon: this._mapIcon(periodForDay.icon.split('?')[0].split('/').pop().split(',')[0], true),
+          weathertext: this._mapDescription(periodForDay.shortForecast, true),
+          wind_speed: periodForDay.windSpeed.match(/\d+/) ? Number(periodForDay.windSpeed.match(/\d+/)[0]) : '',
+          wind_direction: periodForDay.windDirection ?? '',
+        });
         }
 
         // Assigns the aggregated values ​​of forecastDaily
         const aggregated = dailyAggregatedValues[i];
         if (aggregated) {
-          if (aggregated.maxTemps.length) this.data.days[i].maximum_temperature = Math.max(...aggregated.maxTemps);
-          if (aggregated.minTemps.length) this.data.days[i].minimum_temperature = Math.min(...aggregated.minTemps);
-          if (aggregated.humidities.length) this.data.days[i].humidity = Math.max(...aggregated.humidities); // Keep Math.max as original
+          if (aggregated.maxTemps.length) Object.assign(this.data.days[i].maximum_temperature = Math.max(...aggregated.maxTemps));
+          if (aggregated.minTemps.length) Object.assign(this.data.days[i].minimum_temperature = Math.min(...aggregated.minTemps));
+          if (aggregated.humidities.length) Object.assign(this.data.days[i].humidity = Math.max(...aggregated.humidities)); // Keep Math.max as original
           
           const validPressures = aggregated.pressuresPa.filter(val => typeof val === 'number' && val !== null);
           if (validPressures.length > 0) {
-            this.data.days[i].pressure = Math.round(Math.max(...validPressures) / 100); // Keeps Math.max and conversion
+            Object.assign(this.data.days[i].pressure = Math.round(Math.max(...validPressures) / 100)); // Keeps Math.max and conversion
           }
         }
       }
