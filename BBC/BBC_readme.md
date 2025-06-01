@@ -71,6 +71,39 @@ The BBC Weather Service uses 3 complementary APIs:
 
 --------------------------------------------------------------------------------
 
+Update 2025-06-01
+
+1. Removed bug that displayed data when user input was null or wrong after already acquiring data:
+
+- Inserted in _verifyStation the _emptyData function to clear data previously obtained when the user changes or deletes the stationID data;
+  
+2. Modified _verifyStation function:
+
+- Modified the latitude, longitude check allowing the use of space after the comma in the regex;
+  ![Regex verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID3.png)
+
+- Added verification of entered coordinates (if null or within valid geographic coordinate values);
+  ![LatLon verification](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID4.png)
+
+- Added compliance check for geonameID (7 or 8 characters);
+  ![GeonameID verification](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID5.png)
+  
+3. New messages to inform the user of errors when entering coordinates:
+
+* "Error: Location is empty or not definded.";
+
+![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID0.png)
+
+* "Error: Invalid Location format. Expected: latitude,longitude or a valid code location;
+
+![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID6.png)
+
+* "Error: Invalid latitude or longitude values in Location "
+
+![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID2.png)
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-31
 
 * Reverted _mapIcon to previous version where comments were recovered.
