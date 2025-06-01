@@ -79,6 +79,8 @@ Update 2025-06-01
 
 ![load data verify](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/loadDataWithParams01.png)
 
+5. (Correction) Re-insert object.assing for assigning display objects in parse functions;
+
 --------------------------------------------------------------------------------
 
 Update 2025-05-31 (Refatored Code):
@@ -141,7 +143,7 @@ Update 2025-05-31 (Refatored Code):
 
 7. Consistent Naming
 
-* Standardized method names to camelCase (_parseLocation instead of _parse_location);
+* Standardized method names to camelCase (_parselocation instead of _parse_location);
 
 * Kept the underscore prefix convention for private methods;
 
