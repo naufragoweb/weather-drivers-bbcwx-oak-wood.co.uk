@@ -75,6 +75,10 @@ Update 2025-06-01
 
 ![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID2.png)
 
+4. Included verification of data extracted from the API;
+
+![load data verify](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/loadDataWithParams01.png)
+
 --------------------------------------------------------------------------------
 
 Update 2025-05-31 (Refatored Code):
