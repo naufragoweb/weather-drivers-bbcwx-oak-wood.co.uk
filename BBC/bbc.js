@@ -50,14 +50,20 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async refreshData(deskletObj) {
-    this.data.status = {
-      cc: SERVICE_STATUS_INIT,
-      forecast: SERVICE_STATUS_INIT,
-      meta: SERVICE_STATUS_INIT,
-      lasterror: false
-    };
+
+    if (!await this._verifyStation()) {
+      this._showError(deskletObj, _(this.data.status.lasterror));
+      return;
+    }
 
     try {
+      this.data.status = {
+        cc: SERVICE_STATUS_INIT,
+        forecast: SERVICE_STATUS_INIT,
+        meta: SERVICE_STATUS_INIT,
+        lasterror: false
+      };
+
       if (!await this._verifyStation()) {
         return this._showError(deskletObj, _('Invalid Station ID'));
       }
@@ -84,7 +90,6 @@ var Driver = class Driver extends wxBase.Driver {
 
       this._emptyData();
 
-      // Data process
       await Promise.all([
         this._parseMetaData(meta),
         this._parseCurrentData(current, forecast),
@@ -110,20 +115,50 @@ var Driver = class Driver extends wxBase.Driver {
   }
 
   async _verifyStation() {
-    if (!this.stationID || typeof this.stationID !== 'string') {
-      this.data.status = { meta: SERVICE_STATUS_ERROR, lasterror: _('Station ID not defined') };
+    if (!this.stationID || typeof this.stationID !== 'string' || this.stationID.trim() === "") {
+      this._emptyData();
+      this.data.status.meta = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = _('Location\nis empty or not defined.');
+      this.latlon = null;
+      this.locationID = null;
       return false;
     }
-    
-    if (/^\-?\d+(\.\d+)?,\-?\d+(\.\d+)?$/.test(this.stationID)) {
-      const [lat, lon] = this.stationID.split(',').map(v => parseFloat(v.trim()));
-      this.latlon = [lat, lon];
-      this.locationID = '';
-    } else {
-      this.latlon = [];
+
+    // Regex to strictly match the GeonameID format, allowing 7 or 8 characters.
+    const geonameId = /^\d{7,8}$/;
+    const match0 = this.stationID.match(geonameId);
+    if (match0) {
       this.locationID = this.stationID;
+      this.latlon = null; 
+      return true;
     }
-    return true;
+
+    // Regex to strictly match the format "lat,lon", allowing spaces around the comma.
+    const latLon = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
+    const match1 = this.stationID.match(latLon);
+    if (match1) {
+      const lat = parseFloat(match1[1]);
+      const lon = parseFloat(match1[2]);
+
+      if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        this._emptyData();
+        this.data.status.meta = SERVICE_STATUS_ERROR;
+        this.data.status.lasterror = _('Invalid latitude or longitude\nvalues in Location.');
+        this.latlon = null;
+        this.locationID = null;
+        return false;
+      }
+
+      this.latlon = [lat, lon];
+      this.locationId = null;
+      return true;
+    }
+    this._emptyData();
+    this.data.status.meta = SERVICE_STATUS_ERROR;
+    this.data.status.lasterror = _('Invalid Location format.\nExpected: "latitude,longitude"\nor a valid code location.');
+    this.latlon = null;
+    this.locationID = null;
+    return false;
   }
 
   _getWeatherAsync(url, params = null) {
