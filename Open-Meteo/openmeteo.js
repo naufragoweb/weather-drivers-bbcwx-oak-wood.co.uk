@@ -121,7 +121,7 @@ var Driver = class Driver extends wxBase.Driver {
     if (!this.stationID || typeof this.stationID !== 'string' || this.stationID.trim() === "") {
       this._emptyData();
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Station ID\nis empty or not defined.');
+      this.data.status.lasterror = _('Location\nis empty or not defined.');
       this.latlon = [];
       
       return false;
@@ -133,7 +133,7 @@ var Driver = class Driver extends wxBase.Driver {
     if (!match) {
       this._emptyData();
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Invalid ID format.\nExpected: latitude,longitude\n(e.g., 40.71,-74.01)');
+      this.data.status.lasterror = _('Invalid Location format.\nExpected: latitude,longitude\n(e.g., 40.71,-74.01)');
       this.latlon = null;
       return false;
     }
@@ -144,7 +144,7 @@ var Driver = class Driver extends wxBase.Driver {
     if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
       this._emptyData();
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = _('Invalid latitude or longitude\nvalues in Station ID.');
+      this.data.status.lasterror = _('Invalid latitude or longitude\nvalues in Location.');
       this.latlon = null;
       return false;
     }
@@ -187,17 +187,12 @@ var Driver = class Driver extends wxBase.Driver {
 
   async _parseMetaData(meta, forecast) {
     try {
-      this.data.city = meta.address.city;
-      //this.data.region = meta.address.state;
-      this.data.country = meta.address.country;
-      this.data.wgs84 = {
-        lat: forecast.latitude,
-        lon: forecast.longitude
-      };
-      if (!this.data.city || !this.data.country) {
-        this.data.status.meta = SERVICE_STATUS_ERROR;
-        return false;
-        }
+      Object.assign(this.data, {
+        city: meta.address.city,
+        //region: meta.address.state;
+        country: meta.address.country,
+        wgs84: {lat: forecast.latitude, lon: forecast.longitude},
+      });
       this.data.status.meta = SERVICE_STATUS_OK;
     } catch (err) {
       global.logError(`Error parsing meta data: ${err.message}`);
@@ -211,16 +206,17 @@ var Driver = class Driver extends wxBase.Driver {
       const isDay = forecast.current.is_day;
       let current = forecast.current;
 
-      this.data.cc.has_temp = true;
-      this.data.cc.temperature = current.temperature_2m;
-      this.data.cc.feelslike = current.apparent_temperature;
-      this.data.cc.wind_speed = current.wind_speed_10m;
-      this.data.cc.wind_direction = this.compassDirection(current.wind_direction_10m);
-      this.data.cc.humidity = current.relative_humidity_2m;
-      this.data.cc.pressure = current.surface_pressure;
-      this.data.cc.weathertext = this._mapDescription(String(current.weather_code, isDay));
-      this.data.cc.icon = this._mapIcon(String(current.weather_code, isDay));
-
+      Object.assign(this.data.cc, {
+        temperature: current.temperature_2m,
+        feelslike: current.apparent_temperature,
+        wind_speed: current.wind_speed_10m,
+        wind_direction: this.compassDirection(current.wind_direction_10m),
+        humidity: current.relative_humidity_2m,
+        pressure: current.surface_pressure,
+        weathertext: this._mapDescription(String(current.weather_code, isDay)),
+        icon: this._mapIcon(String(current.weather_code, isDay)),
+        has_temp: true,
+      });
       this.data.status.cc = SERVICE_STATUS_OK;
     } catch (err) {
       global.logError(`Error parsing current data: ${err.message}`);
@@ -236,18 +232,17 @@ var Driver = class Driver extends wxBase.Driver {
       let forecasts = forecast.daily;
       for (let i = 0; i < forecasts.time.length; i++) {
         let day = new Object();
-        day.day = this._getDayName(new Date(forecasts.time[i]).getUTCDay());
-
-        day.maximum_temperature = forecasts.temperature_2m_max[i];
-        day.minimum_temperature = forecasts.temperature_2m_min[i];
-        day.wind_speed = forecasts.wind_speed_10m_max[i];
-        day.wind_direction = this.compassDirection(forecasts.wind_direction_10m_dominant[i]);
-        day.weathertext = this._mapDescription(String(forecasts.weather_code[i], i === 0 ? isDay : true));
-        day.icon = this._mapIcon(String(forecasts.weather_code[i], i === 0 ? isDay : true));
-        day.humidity = forecasts.relative_humidity_2m_mean[i];
-        day.pressure = forecasts.surface_pressure_mean[i];
-
-        this.data.days[i] = day;
+        Object.assign(this.data.days[i], {
+          day: this._getDayName(new Date(forecasts.time[i]).getUTCDay()),
+          maximum_temperature: forecasts.temperature_2m_max[i],
+          minimum_temperature: forecasts.temperature_2m_min[i],
+          wind_speed: forecasts.wind_speed_10m_max[i],
+          wind_direction: this.compassDirection(forecasts.wind_direction_10m_dominant[i]),
+          weathertext: this._mapDescription(String(forecasts.weather_code[i], i === 0 ? isDay : true)),
+          icon: this._mapIcon(String(forecasts.weather_code[i], i === 0 ? isDay : true)),
+          humidity: forecasts.relative_humidity_2m_mean[i],
+          pressure: forecasts.surface_pressure_mean[i],
+        });
       }
       this.data.status.forecast = SERVICE_STATUS_OK;
     } catch (err) {
