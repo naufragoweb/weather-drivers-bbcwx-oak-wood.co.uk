@@ -15,3 +15,11 @@
 All the charm and beauty of Google's weather icons for the BBCx desklet for Cinnamon Desktop!
 
 </div>
+
+How to use:
+
+* Paste the entire contents of this folder into: 
+
+~/home/[user]/.local/share/cinnamon/desklets/bbcx@oak-wood.co.uk/5.4/icons/user
+
+* In the settings, change the icon pack to "User defined" and your new icons will appear in the weather forecasts.
