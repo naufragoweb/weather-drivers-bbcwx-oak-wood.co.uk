@@ -80,9 +80,11 @@ Update 2025-06-01
 
 ![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID6.png)
 
-* "Error: Invalid latitude or longitude values in Location "
+* "Error: Invalid latitude or longitude values in Location ";
 
 ![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID2.png)
+
+4. (Fix) Adjust linkURL to direct to user location;
 
 --------------------------------------------------------------------------------
 
