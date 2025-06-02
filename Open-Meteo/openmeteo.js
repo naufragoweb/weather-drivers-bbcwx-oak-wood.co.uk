@@ -213,8 +213,8 @@ var Driver = class Driver extends wxBase.Driver {
         wind_direction: this.compassDirection(current.wind_direction_10m),
         humidity: current.relative_humidity_2m,
         pressure: current.surface_pressure,
-        weathertext: this._mapDescription(String(current.weather_code, isDay)),
-        icon: this._mapIcon(String(current.weather_code, isDay)),
+        weathertext: this._mapDescription(String(current.weather_code), isDay),
+        icon: this._mapIcon(String(current.weather_code), isDay),
         has_temp: true,
       });
       this.data.status.cc = SERVICE_STATUS_OK;
@@ -238,8 +238,8 @@ var Driver = class Driver extends wxBase.Driver {
           minimum_temperature: forecasts.temperature_2m_min[i],
           wind_speed: forecasts.wind_speed_10m_max[i],
           wind_direction: this.compassDirection(forecasts.wind_direction_10m_dominant[i]),
-          weathertext: this._mapDescription(String(forecasts.weather_code[i], i === 0 ? isDay : true)),
-          icon: this._mapIcon(String(forecasts.weather_code[i], i === 0 ? isDay : true)),
+          weathertext: this._mapDescription(String(forecasts.weather_code[i]), i === 0 ? isDay : true),
+          icon: this._mapIcon(String(forecasts.weather_code[i]), i === 0 ? isDay : true),
           humidity: forecasts.relative_humidity_2m_mean[i],
           pressure: forecasts.surface_pressure_mean[i],
         });
@@ -303,13 +303,10 @@ var Driver = class Driver extends wxBase.Driver {
     };
 
     let iconCode = 'na';
-    const iconKey = icon ? icon.toString() : '';
-
     if (icon && (typeof icons[icon] !== 'undefined')) {
     iconCode = icons[icon];
     }
-
-    if (!isDay === '0' && (typeof nightIcons[icon] !== 'undefined')) {
+    if (isDay === 0 && (typeof nightIcons[icon] !== 'undefined')) {
     iconCode = nightIcons[icon];
     }
     return iconCode;
