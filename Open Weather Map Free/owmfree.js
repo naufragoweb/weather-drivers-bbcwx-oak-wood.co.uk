@@ -104,7 +104,7 @@ var Driver = class Driver extends wxBase.Driver {
         this._parseForecastData(forecast)
       ]);
 
-      this.linkURL += this.locationID;
+      this.linkURL = this.linkURL + this.locationID;
 
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
