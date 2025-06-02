@@ -53,8 +53,11 @@
 Update 2025-06-01
 
 1. Removed bug that displayed data when user input was null or wrong after already acquiring data:
+
 * Inserted in _verifyStation the _emptyData function to clear data previously obtained when the user changes or deletes the stationID data;
+
 2. Modified _verifyStation function:
+
 * Modified the latitude, longitude check allowing the use of space after the comma in the regex;
 
 ![Regex verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID3.png)
@@ -64,6 +67,7 @@ Update 2025-06-01
 ![LatLon verification](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID4.png)
 
 3. New messages to inform the user of errors when entering coordinates:
+
 * "Error: Location is empty or not definded.";
 
 ![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID0.png)
@@ -82,11 +86,14 @@ Update 2025-06-01
 
 5. (Correction) Re-insert object.assing for assigning display objects in parse functions;
 
+6. (Correction) Fix for _mapIcon function to determine day and night icons for current conditions and day0 in forecast;
+
 --------------------------------------------------------------------------------
 
 Update 2025-05-31 (Refatored Code):
 
 1. Organization and Constants
+
 * Consolidation of constants: I grouped all the constants at the beginning of the file for better visibility:
 
 ![Consolidation of constants](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image1.png)
@@ -96,6 +103,7 @@ Update 2025-05-31 (Refatored Code):
 ![Centralized mappings](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image2.png)
 
 2. Simplifying Methods
+
 * _emptyData(): I replaced the manual initialization with a more compact structure:
 
 ![emptyData](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image3.png)
@@ -105,7 +113,9 @@ Update 2025-05-31 (Refatored Code):
     I used Promise.all to load the data in parallel;
   
     I simplified the error handling logic;
+    
 3. Helper Improvements
+
 * _getWeatherAsync(): Made more concise and insert Agent User:
 
 ![getWeatherAsync](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image11.png)
@@ -116,6 +126,7 @@ Update 2025-05-31 (Refatored Code):
 ![Status Handling](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image6.png)
 
 5. ES6+ (ECMAScript 6) Syntax Improvements
+
 * Destructuring assignment:
 
 ![Destructuring assignment](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image7.png)
@@ -129,6 +140,7 @@ Update 2025-05-31 (Refatored Code):
 ![Chaining](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image9.png)
 
 6. Reduced Repetitive Code
+
 * Replaced for loops with array methods like slice() and fill();
 
 * Removed similar methods ( APIs load ) by consolidating them into conditional logic;
@@ -136,13 +148,17 @@ Update 2025-05-31 (Refatored Code):
 ![APIs load](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/image12.png)
 
 7. Consistent Naming
+
 * Standardized method names to camelCase (_parselocation instead of _parse_location);
 
 * Kept the underscore prefix convention for private methods;
+
 8. Unified Error Handling
+
 * Created a consistent pattern for error handling across all asynchronous operations;
 
 * Simplified updating of error state;
+
 9. Operational Efficiency
 * Parallelized requests with Promise.all;
 
