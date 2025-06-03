@@ -288,7 +288,7 @@ var Driver = class Driver extends wxBase.Driver {
         '5': '20',  // Mist
         '6': '20',  // Fog
         '7': '26',  // Light Cloud
-        '8': '26d', // Thick Cloud
+        '8': '26',  // Thick Cloud
         '10': '11', // Light Rain Showers (day)
         '11': '09', // Drizzle
         '12': '11', // Light Rain
@@ -298,14 +298,14 @@ var Driver = class Driver extends wxBase.Driver {
         '18': '18', // Sleet
         '20': '18', // Hail Showers (day)
         '21': '18', // Hail
-        '23': '13', // Light Snow Showers (day)
+        '23': '14', // Light Snow Showers (day)
         '24': '13', // Light Snow
         '26': '16', // Heavy Snow Showers (day)
         '27': '16', // Heavy Snow
         '29': '04', // Thundery Showers (day)
         '30': '04', // Thunderstorms
         '31': '01', // Tropical storm
-        '32': '20', // Hazy
+        '32': '22', // Hazy
         '33': '15', // Blowing Snow
         '34': '20', // Mist
         '35': '23', // Sandstorm
@@ -325,7 +325,8 @@ var Driver = class Driver extends wxBase.Driver {
         '19': '18', // Hail Showers (night)
         '22': '46', // Light Snow Showers (night)
         '25': '16', // Heavy Snow Showers (night)
-        '28': '04'  // Thundery Showers (night)
+        '28': '04', // Thundery Showers (night)
+        '32': '21'  // Hazy
       }
     };
 
