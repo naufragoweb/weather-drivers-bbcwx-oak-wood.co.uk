@@ -103,6 +103,13 @@ Update 2025-06-01
 ![error verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID2.png)
 
 --------------------------------------------------------------------------------
+
+Update 2025-06-03
+
+* (Correction) Small adjustments to the display of icons;
+
+--------------------------------------------------------------------------------
+
 Update 2025-06-02
 
 * (Correction) Adjust the display of icons 34 and 36 to their respective desklet icon;
