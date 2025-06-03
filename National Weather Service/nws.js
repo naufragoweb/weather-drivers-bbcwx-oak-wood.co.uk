@@ -578,7 +578,7 @@ var Driver = class Driver extends wxBase.Driver {
         'Flurries/Drizzle': '',
         'Flurries/Sprinkles': ''
     };
-    if (!text) return '';
-    return textMappings[text]?.(isDay) || _(text);
+    //if (!text) return '';
+    return text ? textMappings[text] || _(text) : '';
   }
 };
