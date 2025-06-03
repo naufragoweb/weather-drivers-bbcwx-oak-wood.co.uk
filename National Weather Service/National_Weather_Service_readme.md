@@ -92,6 +92,12 @@ Update 2025-06-01
 
 --------------------------------------------------------------------------------
 
+Update 2025-06-02
+
+* (Correction) Fixed error in _mapDescription that indicated that textMappings was not a function;
+
+--------------------------------------------------------------------------------
+
 Update 2025-05-31
 
 * Reverted _mapIcon to previous version where comments were recovered;
