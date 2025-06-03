@@ -307,12 +307,12 @@ var Driver = class Driver extends wxBase.Driver {
         '31': '01', // Tropical storm
         '32': '20', // Hazy
         '33': '15', // Blowing Snow
-        '34': '08', // Freezing Drizzle
+        '34': '20', // Mist
         '35': '23', // Sandstorm
         '36': '26', // Light Cloud
         //'37': '16',  //Heavy Snow Showers (???)
-        //'38': '', // (???)
-        '39': '11'   // Light Rain
+        '38': '09', // Drizzle
+        '39': '11'  // Light Rain
       },
       night: {
         '0': '31',  // Clear Sky
@@ -337,9 +337,8 @@ var Driver = class Driver extends wxBase.Driver {
   _mapDescription(code) {
     const textMappings = {
       'Sandstorm'         : _('Sand Storm'),
-      'Light Rain Showers': _('Light Rain Showers'),
-      'Heavy Rain Showers': _('Heavy Rain Showers'),
-      'Light Rain Showers': _('Light Rain Showers'),
+      'Light Rain Showers': _('Light Rain Shower'),
+      'Heavy Rain Showers': _('Heavy Rain Shower'),
       'Sleet Showers'     : _('Sleet Shower'),
       'Hail Showers'      : _('Hail Shower'),
       'Thundery Showers'  : _('Thundery Shower')
