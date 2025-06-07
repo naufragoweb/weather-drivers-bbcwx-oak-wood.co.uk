@@ -4,10 +4,17 @@
 
 </div>
 
+<div align="center">
+
 ![BBCwx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/google-weather1.png)
+
+</div>
+
+<div align="center">
 
 ![BBCwx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/google-weather2.png)
 
+</div>
 
 <div align="center">
 
@@ -44,7 +51,11 @@ for this:
 
 * To display the Google icon, copy the google.png file and paste it into ( ~/home/.local/share/cinnamon/desklet/bbcwx@oak-wood.co.uk/5.4/icons/colorful) and restart Cinnamon.
 
+<div align="center">
+
 ![Google image](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/Google_Weather/google.png)
+
+</div>
 
 * In the near future I will change desklet.js and settings-schema.json and include the Google API.
 
