@@ -47,7 +47,7 @@ for this:
 
 ![Google Code](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/google-weather4.png)
 
-* After this change, place the file in the drivers folder ( ~/home/.local/share/cinnamon/desklet/bbcwx@oak-wood.co.uk/5.4/drivers), restart Cinnamon and in the desklet configuration screen choose "Open Wheater Map", add your apikey and put your location. Enjoy!
+* After this change, change the file name to own.js and place the file in the drivers folder ( ~/home/.local/share/cinnamon/desklet/bbcwx@oak-wood.co.uk/5.4/drivers), restart Cinnamon and in the desklet configuration screen choose "Open Wheater Map", add your apikey and put your location. Enjoy!
 
 * To display the Google icon, copy the google.png file and paste it into ( ~/home/.local/share/cinnamon/desklet/bbcwx@oak-wood.co.uk/5.4/icons/colorful) and restart Cinnamon.
 
