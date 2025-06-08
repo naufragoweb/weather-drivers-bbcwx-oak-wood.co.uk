@@ -14,7 +14,6 @@ const MAX_DAYS = 7;
 Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
 
 var Driver = class Driver extends wxBase.Driver {
-  // initialize the driver
   constructor(stationID, apikey, version) {
     super(stationID, apikey);
     this.version = version;
@@ -34,16 +33,51 @@ var Driver = class Driver extends wxBase.Driver {
     // Language Code Mapping for Google Weather API (BCP-47)
     // Lowercase keys to match output of GLib.get_language_names() after toLowerCase() in wxbase.js
     this.lang_map = {
-      'ar': 'ar', 'bg': 'bg', 'bn': 'bn', 'ca': 'ca', 'cs': 'cs', 'da': 'da', 'de': 'de', 'el': 'el',
+      'ar': 'ar', 
+      'bg': 'bg', 
+      'bn': 'bn', 
+      'ca': 'ca', 
+      'cs': 'cs', 
+      'da': 'da', 
+      'de': 'de', 
+      'el': 'el',
       'en': 'en', 'en_gb': 'en-GB', 'en_us': 'en-US',
       'es': 'es', 'es_es': 'es-ES', 'es_419': 'es-419', // Espanhol (Latin America)
-      'fa': 'fa', 'fi': 'fi', 'fr': 'fr', 'fr_ca': 'fr-CA',
+      'fa': 'fa', 
+      'fi': 'fi', 
+      'fr': 'fr', 'fr_ca': 'fr-CA',
       'he': 'iw', // Google use 'iw' for Hebrew
-      'hi': 'hi', 'hr': 'hr', 'hu': 'hu', 'id': 'id', 'it': 'it', 'ja': 'ja', 'ko': 'ko',
-      'lt': 'lt', 'lv': 'lv', 'ml': 'ml', 'mr': 'mr', 'ms': 'ms', 'nb': 'no', // Norueguês Bokmål
-      'nl': 'nl', 'pl': 'pl', 'pt': 'pt', 'pt_br': 'pt-BR', 'pt_pt': 'pt-PT',
-      'ro': 'ro', 'ru': 'ru', 'sk': 'sk', 'sl': 'sl', 'sr': 'sr', 'sv': 'sv', 'sw': 'sw',
-      'ta': 'ta', 'te': 'te', 'th': 'th', 'tr': 'tr', 'uk': 'uk', 'ur': 'ur', 'vi': 'vi',
+      'hi': 'hi', 
+      'hr': 'hr', 
+      'hu': 'hu', 
+      'id': 'id', 
+      'it': 'it', 
+      'ja': 'ja', 
+      'ko': 'ko',
+      'lt': 'lt', 
+      'lv': 'lv', 
+      'ml': 'ml', 
+      'mr': 'mr', 
+      'ms': 'ms', 
+      'nb': 'no', // Norueguês Bokmål
+      'nl': 'nl', 
+      'pl': 'pl', 
+      'pt': 'pt', 'pt_pt': 'pt-PT',
+      'pt_br': 'pt-BR', 
+      'ro': 'ro', 
+      'ru': 'ru', 
+      'sk': 'sk', 
+      'sl': 'sl', 
+      'sr': 'sr', 
+      'sv': 'sv', 
+      'sw': 'sw',
+      'ta': 'ta', 
+      'te': 'te', 
+      'th': 'th', 
+      'tr': 'tr', 
+      'uk': 'uk', 
+      'ur': 'ur', 
+      'vi': 'vi',
       'zh_cn': 'zh-CN', 'zh_hans': 'zh-Hans', 'zh_hant': 'zh-Hant', 'zh_hk': 'zh-HK', 'zh_tw': 'zh-TW'
     };
     
@@ -52,16 +86,31 @@ var Driver = class Driver extends wxBase.Driver {
 
   _emptyData() {
     this.data = {
-      city: '', country: '', region: '',
+      city: '', 
+      country: '', 
+      region: '',
       wgs84: { lat: '', lon: '' },
       cc: {
-        feelslike: '', has_temp: false, humidity: '', icon: '', pressure: '',
-        temperature: '', weathertext: '', wind_direction: '', wind_speed: '', 
+        feelslike: '', 
+        has_temp: false, 
+        humidity: '', 
+        icon: '', 
+        pressure: '',
+        temperature: '', 
+        weathertext: '', 
+        wind_direction: '', 
+        wind_speed: '', 
         visibility: ''
       },
       days: Array(MAX_DAYS).fill().map(() => ({
-        day: '', humidity: '', icon: '', maximum_temperature: '', minimum_temperature: '',
-        weathertext: '', wind_direction: '', wind_speed: ''
+        day: '', 
+        humidity: '', 
+        icon: '', 
+        maximum_temperature: '', 
+        minimum_temperature: '',
+        weathertext: '', 
+        wind_direction: '', 
+        wind_speed: ''
       })),
       status: {}
     };
@@ -70,7 +119,7 @@ var Driver = class Driver extends wxBase.Driver {
   async refreshData(deskletObj) {
     
     if (!await this._verifyStation()) {
-      this._showError(deskletObj, (await this._tradutor(this.data.status.lasterror)));
+      this._showError(deskletObj, await _(this.data.status.lasterror));
       return;
     }
     try {
@@ -104,7 +153,7 @@ var Driver = class Driver extends wxBase.Driver {
       return true;
     } catch (err) {
       global.logError(`Google Weather: error: ${err.message}`);
-      this._showError(deskletObj, (await this._tradutor('An unexpected error occurred:\n').format(err.message)));
+      this._showError(deskletObj, await _('An unexpected error occurred:\n') + err.message);
     }
   }
 
@@ -212,7 +261,7 @@ var Driver = class Driver extends wxBase.Driver {
     } catch (err) {
       global.logError(`Error parsing meta data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = await _(`Incomplete location data:\n`).format(err.message);
+      this.data.status.lasterror = await _(`Error processing location data:\n`) + err.message;
     }
     return true;
   }
@@ -229,8 +278,7 @@ var Driver = class Driver extends wxBase.Driver {
         humidity: current.relativeHumidity,
         pressure: parseInt(current.airPressure.meanSeaLevelMillibars),
         visibility: current.visibility.distance,
-        weathertext: current.weatherCondition.description.text,
-        //icon: this._mapIcon((current.weatherCondition.iconBaseUri.split('/').pop().toUpperCase() || current.weatherCondition.type), isDaytime),
+        weathertext: await _(current.weatherCondition.description.text),
         icon: this._mapIcon(current.weatherCondition.type, isDaytime),
         has_temp: true,
       });
@@ -238,7 +286,7 @@ var Driver = class Driver extends wxBase.Driver {
     } catch (err) {
       global.logError(`Error parsing current data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
-      this.data.status.lasterror = await _(`Incomplete current data:\n`).format(err.message);
+      this.data.status.lasterror = await _(`Error processing current data:\n`) + err.message;
     }
     return true;
   }
@@ -250,6 +298,7 @@ var Driver = class Driver extends wxBase.Driver {
 
       for (let i = 0; i < forecasts.length; i++) {
         let dayorNightForecast = (i === 0 && isDaytime === false) ? forecasts[i].nighttimeForecast : forecasts[i].daytimeForecast;
+        const weatherText = await _(dayorNightForecast.weatherCondition.description.text);
 
         Object.assign(this.data.days[i], {
           day: this._getDayName(i),
@@ -257,16 +306,16 @@ var Driver = class Driver extends wxBase.Driver {
           minimum_temperature: forecasts[i].minTemperature.degrees,
           wind_speed: dayorNightForecast.wind.speed.value,
           wind_direction: this.compassDirection(dayorNightForecast.wind.direction.degrees),
-          weathertext: dayorNightForecast.weatherCondition.description.text,
+          weathertext: weatherText,
           icon: this._mapIcon(dayorNightForecast.weatherCondition.type, i === 0 ? isDaytime : true),
           humidity: dayorNightForecast.relativeHumidity
-          //pressure: forecast.surface_pressure_mean[i],
         });
       }
       this.data.status.forecast = SERVICE_STATUS_OK;
     } catch (err) {
       global.logError(`Error parsing forecast data: ${err.message}`);
-      this.data.status.lasterror = await _(`Incomplete forecast data:\n`).format(err.message);
+      this.data.status.cc = SERVICE_STATUS_ERROR;
+      this.data.status.lasterror = await _(`Error processing forecast data:\n`) + err.message;
     }
     return true;
   }
@@ -283,6 +332,7 @@ var Driver = class Driver extends wxBase.Driver {
   _mapIcon(icon, isDaytime) {
     
     const icons = {
+      day: {
       // Confirmed in APIs
       'CHANCE_OF_SHOWERS'       : '09',  // Chance of intermittent rain (Drizzle)
       'CLEAR'                   : '32',  // No clouds (Sunny)
@@ -326,9 +376,9 @@ var Driver = class Driver extends wxBase.Driver {
       'SNOW_PERIODICALLY_HEAVY' : '16',  // Snow, at times heavy (Heavy snow)
       'THUNDERSHOWER'           : '37',  // A shower of rain accompanied by thunder and lightning (Thundery showers)
       'WIND_AND_RAIN'           : '12'   // High wind with precipitation (Heavy rain)
-    };
+    },
 
-    const nightIcons = {
+    night: {
       'CLEAR'                   : '31',  // Clear Sky
       'HEAVY_SNOW_SHOWERS'      : '46',  // Show showers
       'HEAVY_THUNDERSTORM'      : '47',  // Heavy thunderstorm (Thundery showers)
@@ -339,16 +389,11 @@ var Driver = class Driver extends wxBase.Driver {
       'RAIN_SHOWERS'            : '45',  // Showers
       'SNOW_SHOWERS'            : '46',  // Snow showers
       'THUNDERSHOWER'           : '47'   // Thundery showers
-    };
-
-    let iconCode = 'na';
-    if (icon && (typeof icons[icon] !== 'undefined')) {
-    iconCode = icons[icon];
     }
-    if (isDaytime === false && nightIcons[icon] !== undefined) {
-    iconCode = nightIcons[icon];
-    }
-    return iconCode;
+  };
+    return isDaytime === false && icons.night[icon] 
+      ? icons.night[icon] 
+      : icons.day[icon] || 'na';
   }
 
   async _tradutor(text) {
@@ -356,11 +401,13 @@ var Driver = class Driver extends wxBase.Driver {
       const lineBreak = '(1)';
       const cleanText = text.replace(/\n/g, lineBreak);
       const query = encodeURIComponent(cleanText);
-      const translate = await this._loadDataWithParams(this._languageURL, 'translate', this._paramsTranslate(query));
-      text = translate[0][0][0].split(lineBreak).join('\n');
-      return text;
+      const translate = await this._loadData(this._languageURL, 'translate', this._paramsTranslate(query));
+      let textTranslate = translate[0][0][0].split(lineBreak).join('\n');
+      textTranslate = textTranslate.toLowerCase();
+      textTranslate = textTranslate.charAt(0).toUpperCase() + textTranslate.slice(1);
+      return textTranslate;
     } catch (e) {
-      global.logError(`Google Weather: Error translating "${text}": ${e}`);
+      global.logError(`BBC Weather: Error translating "${text}": ${e}`);
       return text; // Fallback: return original text
     }
   }
@@ -368,14 +415,13 @@ var Driver = class Driver extends wxBase.Driver {
 
 async function _(str) {
   try {
-    let driver = new Driver;
+    let driver;
+    if (!driver) driver = new Driver;
     if (Gettext.dgettext(UUID, str) && Gettext.dgettext(UUID, str) !== str) return Gettext.dgettext(UUID, str);
     if (Gettext.dgettext('cinnamon', str) && Gettext.dgettext('cinnamon', str) !== str) return Gettext.dgettext('cinnamon', str);
-    if (await driver._tradutor(str)) return driver._tradutor(str) || str;
-    return true
+    return await driver._tradutor(str) || str;
   } catch (err) {
-    global.logError(`Google Weather: error: ${err.message}`);
+    global.logError(`BBC Weather: error: ${err.message}`);
     return str;
   }
 }
-
