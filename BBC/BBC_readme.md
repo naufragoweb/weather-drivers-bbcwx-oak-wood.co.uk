@@ -1,4 +1,4 @@
-# Implementing BBC Weather Driver
+# Implementing BBCwx Weather Driver
 
 ![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx1.png)
 
@@ -8,7 +8,7 @@ Challenges and Solutions:
 
 🔍 API Context:
 
-The BBC Weather Service uses 3 complementary APIs:
+The BBCwx Weather Service uses 3 complementary APIs:
 
     * Location API: Provides geonameID (essential for other APIs), city name, country and geographic coordinates
     * Current Conditions API: Real-time weather data
@@ -68,6 +68,49 @@ The BBC Weather Service uses 3 complementary APIs:
 *** Additional data must be processed before rendering;
 
 *** User experience can be improved with small adjustments to the flow.
+
+--------------------------------------------------------------------------------
+
+Update 2025-06-08
+
+1. Changes in _verifyStation:
+
+- Code optimization;
+- Bug removal when user used geoname ID as location and did not display location data;
+- Optimized line-wrap error messages for display and translation;
+
+2. Inserting a language map for translation:
+
+- Language map for unofficial Google Translation API (model 2022q2);
+
+3. Modification (optimization) to API loading functions:
+
+- Removed _loadDataWithParams function;
+- Modification to the _loadData function to accept URLs with and without parameters;
+
+4. Optimization of the forecast data parse function:
+
+- Return to the original loop function to search for data on days;
+- Modified the call to _getDayName to use the original function from wxbase.js;
+- Modification to the "insight" variable removing redundancy;
+
+5. Removing local _getDayName;
+
+6. Modification in _mapIcon:
+
+- isNight now correctly calls night icons for current conditions and day0;
+
+7. Insertion of unofficial Google translation API;
+
+- Inserting User Agent for the translation API;
+- Modification of the _ function to add one more translation method:
+    * The script searches for a translation in the desklet's own translation system;
+    * If it doesn't find it, it searches in Cinnamon Desktop;
+    * If it doesn't find it, it searches in the Google translation API;
+    * If it returns an error, then it returns the original text;
+- Modification in almost all error alerts that return in this.data.status.error so that the translation system works on them as well.
+
+8. Small optimizations, cleaning and organization in the code;
 
 --------------------------------------------------------------------------------
 
