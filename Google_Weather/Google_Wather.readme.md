@@ -62,6 +62,20 @@ for this:
 ----------------------------------------------------------------------------------
 # CHANGELOG:
 
+Update 2025-06-08
+
+1. Improvements in _tradutor():
+
+- Added adjustment of returned text for capitalization and text uniformity;
+
+2. Improvements in function _():
+
+- Modified the call to "var Driver" and removed redundancy in the call to _tradutor();
+
+3. Minor changes and adjustments to error texts;
+
+------------------------------------------------------------------------------------
+
 Update 2025-06-07
 
 * New Driver start;
