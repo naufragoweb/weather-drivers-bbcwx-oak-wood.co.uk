@@ -23,10 +23,10 @@ var Driver = class Driver extends wxBase.Driver {
 
     this.capabilities.forecast.pressure = false;
     
-
     this.drivertype = 'Google';
     this.maxDays = MAX_DAYS;
     this.linkText = 'Google Weather';
+    this.linkURL = 'https://www.google.com/maps/place';
     this._baseURL = `https://weather.googleapis.com/v1`;
     this._locationURL = `https://nominatim.openstreetmap.org/reverse`;
     this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
@@ -136,9 +136,9 @@ var Driver = class Driver extends wxBase.Driver {
       let currentURL = `${this._baseURL}/currentConditions:lookup`;
       let forecastURL = `${this._baseURL}/forecast/days:lookup`;
       const [meta, current, forecast] = await Promise.all([
-        this._loadDataWithParams(this._locationURL, 'meta', this._paramsGeocode()),
-        this._loadDataWithParams(currentURL, 'current', this._paramsGoogle()),
-        this._loadDataWithParams(forecastURL, 'forecast', {...this._paramsGoogle(), days: '7', pageSize: '7'}) 
+        this._loadData(this._locationURL, 'meta', this._paramsGeocode()),
+        this._loadData(currentURL, 'current', this._paramsGoogle()),
+        this._loadData(forecastURL, 'forecast', {...this._paramsGoogle(), days: '7', pageSize: '7'}) 
       ]);
 
       this._emptyData();
@@ -148,6 +148,8 @@ var Driver = class Driver extends wxBase.Driver {
         this._parseCurrentData(current),
         this._parseForecastData(current, forecast)
       ]);
+
+      this.linkURL = `${this.linkURL}/${this.data.city}/@${this.latlon[0]},${this.latlon[1]}/`;
 
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
@@ -377,7 +379,8 @@ var Driver = class Driver extends wxBase.Driver {
       'SNOWSTORM'               : '14',  // Snow with possible thunder and lightning (Medium snow)
       'SNOW_PERIODICALLY_HEAVY' : '16',  // Snow, at times heavy (Heavy snow)
       'THUNDERSHOWER'           : '37',  // A shower of rain accompanied by thunder and lightning (Thundery showers)
-      'WIND_AND_RAIN'           : '12'   // High wind with precipitation (Heavy rain)
+      'WIND_AND_RAIN'           : '12',  // High wind with precipitation (Heavy rain)
+      'TYPE_UNSPECIFIED'        : 'na'   // Unknown
     },
 
     night: {
