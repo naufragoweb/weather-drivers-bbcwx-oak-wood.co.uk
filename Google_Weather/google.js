@@ -26,7 +26,7 @@ var Driver = class Driver extends wxBase.Driver {
     this.drivertype = 'Google';
     this.maxDays = MAX_DAYS;
     this.linkText = 'Google Weather';
-    this.linkURL = 'https://www.google.com/maps/place';
+    this.linkURL = 'https://www.google.com/search?q=Weather in ';
     this._baseURL = `https://weather.googleapis.com/v1`;
     this._locationURL = `https://nominatim.openstreetmap.org/reverse`;
     this.userAgent = `(${UUID} ${this.version}; Contact: https://github.com/linuxmint/cinnamon-spices-desklets/issues)`;
@@ -149,7 +149,7 @@ var Driver = class Driver extends wxBase.Driver {
         this._parseForecastData(current, forecast)
       ]);
 
-      this.linkURL = `${this.linkURL}/${this.data.city}/@${this.latlon[0]},${this.latlon[1]}/`;
+      this.linkURL = `${this.linkURL}${this.data.city}`;
 
       deskletObj.displayMeta();
       deskletObj.displayCurrent();
