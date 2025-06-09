@@ -73,6 +73,12 @@ Update 2025-06-09
 
     - Removed the call to translate the weather conditions texts (the Google API already brings the texts translated into Cinnamon's native language);
 
+3. Add link URL to google Weather in Google search;
+
+4. Insert new specific type of icon type (TYPE UNSPECIFIED) in _mapIcon;
+
+5. Rename _loadDataWithParams() to _loadData();
+
 ----------------------------------------------------------------------------------
 
 Update 2025-06-08
