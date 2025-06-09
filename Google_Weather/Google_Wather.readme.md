@@ -62,15 +62,28 @@ for this:
 ----------------------------------------------------------------------------------
 # CHANGELOG:
 
+Update 2025-06-09
+
+1. Improvements in function _():
+
+    - Remove redundantly created Driver instance;
+    - Stores the current active driver instance (var Driver) to avoid creating multiple unnecessary instances;
+
+2. Modification in current and forecast data parse:
+
+    - Removed the call to translate the weather conditions texts (the Google API already brings the texts translated into Cinnamon's native language);
+
+----------------------------------------------------------------------------------
+
 Update 2025-06-08
 
 1. Improvements in _tradutor():
 
-- Added adjustment of returned text for capitalization and text uniformity;
+    - Added adjustment of returned text for capitalization and text uniformity;
 
 2. Improvements in function _():
 
-- Modified the call to "var Driver" and removed redundancy in the call to _tradutor();
+    - Modified the create to new "var Driver" instance and removed redundancy in the call to _tradutor();
 
 3. Minor changes and adjustments to error texts;
 
