@@ -71,44 +71,64 @@ The BBCwx Weather Service uses 3 complementary APIs:
 
 --------------------------------------------------------------------------------
 
+# CHANGELOG:
+
+Update 2025-06-09
+
+1. Improvements in function _():
+
+    - Remove redundantly created Driver instance;
+    - Stores the current active driver instance (var Driver) to avoid creating multiple unnecessary instances;
+
+2. Insert new local _getDayName:
+
+    - Insert new local _getDayName function to adapt to the original wxbase.js loop when obtaining data from forecast objects correctly;
+
+3. Modification to _mapDescription:
+
+    - Modified the text output for the _ function;
+    - Removed the call to the _ function directly in the text to be called only at the output of _mapDescription;
+
+--------------------------------------------------------------------------------
+
 Update 2025-06-08
 
 1. Changes in _verifyStation:
 
-- Code optimization;
-- Bug removal when user used geoname ID as location and did not display location data;
-- Optimized line-wrap error messages for display and translation;
+    - Code optimization;
+    - Bug removal when user used geoname ID as location and did not display location data;
+    - Optimized line-wrap error messages for display and translation;
 
 2. Inserting a language map for translation:
 
-- Language map for unofficial Google Translation API (model 2022q2);
+    - Language map for unofficial Google Translation API (model 2022q2);
 
 3. Modification (optimization) to API loading functions:
 
-- Removed _loadDataWithParams function;
-- Modification to the _loadData function to accept URLs with and without parameters;
+    - Removed _loadDataWithParams function;
+    - Modification to the _loadData function to accept URLs with and without parameters;
 
 4. Optimization of the forecast data parse function:
 
-- Return to the original loop function to search for data on days;
-- Modified the call to _getDayName to use the original function from wxbase.js;
-- Modification to the "insight" variable removing redundancy;
+    - Return to the original loop function to search for data on days;
+    - Modified the call to _getDayName to use the original function from wxbase.js;
+    - Modification to the "insight" variable removing redundancy;
 
 5. Removing local _getDayName;
 
 6. Modification in _mapIcon:
 
-- isNight now correctly calls night icons for current conditions and day0;
+    - isNight now correctly calls night icons for current conditions and day0;
 
 7. Insertion of unofficial Google translation API;
 
-- Inserting User Agent for the translation API;
-- Modification of the _ function to add one more translation method:
-    * The script searches for a translation in the desklet's own translation system;
-    * If it doesn't find it, it searches in Cinnamon Desktop;
-    * If it doesn't find it, it searches in the Google translation API;
-    * If it returns an error, then it returns the original text;
-- Modification in almost all error alerts that return in this.data.status.error so that the translation system works on them as well.
+    - Inserting User Agent for the translation API;
+    - Modification of the _ function to add one more translation method:
+        * The script searches for a translation in the desklet's own translation system;
+        * If it doesn't find it, it searches in Cinnamon Desktop;
+        * If it doesn't find it, it searches in the Google translation API;
+        * If it returns an error, then it returns the original text;
+    - Modification in almost all error alerts that return in this.data.status.error so that the translation system works on them as well.
 
 8. Small optimizations, cleaning and organization in the code;
 
@@ -118,17 +138,17 @@ Update 2025-06-01
 
 1. Removed bug that displayed data when user input was null or wrong after already acquiring data:
 
-- Inserted in _verifyStation the _emptyData function to clear data previously obtained when the user changes or deletes the stationID data;
+    - Inserted in _verifyStation the _emptyData function to clear data previously obtained when the user changes or deletes the stationID data;
   
 2. Modified _verifyStation function:
 
-- Modified the latitude, longitude check allowing the use of space after the comma in the regex;
+    - Modified the latitude, longitude check allowing the use of space after the comma in the regex;
   ![Regex verifyStation](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID3.png)
 
-- Added verification of entered coordinates (if null or within valid geographic coordinate values);
+    - Added verification of entered coordinates (if null or within valid geographic coordinate values);
   ![LatLon verification](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID4.png)
 
-- Added compliance check for geonameID (7 or 8 characters);
+    - Added compliance check for geonameID (7 or 8 characters);
   ![GeonameID verification](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/stationID5.png)
   
 3. New messages to inform the user of errors when entering coordinates:
