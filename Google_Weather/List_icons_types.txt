@@ -1,0 +1,138 @@
+list of URLs with Google Weather icons... 
+As the API is poorly documented (in this regard) I will extract the addresses with 
+the icons from the API and make a list capable of receiving the weather icon 
+information and being able to properly assign the weather icons.
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/drizzle
+Type: LIGHT_RAIN
+Description: Light rain
+Type: CHANCE_OF_SHOWERS
+Description: Chance of showers
+
+=== * ===
+[nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/clear
+Type: CLEAR
+Description: Clear
+Type: WINDY
+Description: Windy
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/cloudy
+Type: CLOUDY
+Description: Cloudy
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/flurries
+Type: LIGHT_SNOW
+Description: Light snow
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/heavy
+Type: HEAVY_RAIN
+Description: Heavy rain
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/isolated_tstorms
+Type: SCATTERED_THUNDERSTORMS
+Description: Scattered thunderstorms
+
+=== * ===
+[nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/mostly_clear
+Type: MOSTLY_CLEAR
+Description: Clear with periodic clouds
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/mostly_cloudy
+Type: MOSTLY_CLOUDY
+Description: Mostly cloudy
+
+=== * ===
+[nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/mostly_cloudy_night
+Type: MOSTLY_CLOUDY
+Description: Mostly cloudy
+
+=== * ===
+[daytimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/mostly_sunny
+Type: MOSTLY_CLEAR
+Description: Mostly sunny
+
+=== * ===
+[nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/partly_clear
+Type: PARTLY_CLOUDY
+Description: Partly cloudy
+
+=== * ===
+[daytimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/party_cloudy
+Type: PARTLY_CLOUDY
+Description: Partly sunny
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/scattered_showers
+Type: SCATTERED_SHOWERS
+Description: Scattered showers
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/scattered_snow
+Type: SNOW_SHOWERS
+Description: Snow showers
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/showers
+Type: RAIN_SHOWERS
+Description: Rain showers
+Type: RAIN
+Description: Rain
+
+=== * ===
+[daytimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/snow_showers
+Type: SNOW
+Description: Snow
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/strong_tstorms
+Type: THUNDERSTORM
+Description: Thunderstorm
+Type: HEAVY_THUNDERSTORM
+Description: Heavy thunderstorm
+
+=== * ===
+[daytimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/sunny
+Type: CLEAR
+Description: Sunny
+
+=== * ===
+[daytimeForecast] [nighttimeForecast]
+Icon: https://maps.gstatic.com/weather/v1/wintry_mix
+Type: RAIN_AND_SNOW
+Description: Rain and snow
+
+
+
+
+
+
+
+
+
+
+
+
