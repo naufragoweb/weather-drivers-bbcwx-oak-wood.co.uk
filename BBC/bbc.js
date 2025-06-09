@@ -21,6 +21,7 @@ var Driver = class Driver extends wxBase.Driver {
     this.version = version;
     currentDriverInstance = this;
     this.maxDays = MAX_DAYS;
+    
     this.capabilities.meta.region = false;
     
     this.drivertype = 'bbc';
@@ -434,7 +435,7 @@ var Driver = class Driver extends wxBase.Driver {
     try {
       return await _(textMap[text]);
     } catch (err) {
-      global.logError(`Open-Meteo: Error translating description: ${e}`);  
+      global.logError(`BBC Weather: Error translating description: ${e}`);  
       return textMap[text];
     }
   }
@@ -466,7 +467,7 @@ async function _(str) {
       }
       return str;
     } catch (err) {
-      global.logError(`Open-Meteo: Error in translate for "${str}": ${err.message}`);
+      global.logError(`BBC Weather: Error in translate for "${str}": ${err.message}`);
       return str;
     }
 }
