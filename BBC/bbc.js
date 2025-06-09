@@ -13,10 +13,13 @@ const MAX_DAYS = 7;
 
 Gettext.bindtextdomain(UUID, `${GLib.get_home_dir()}/.local/share/locale`);
 
+var currentDriverInstance = null;
+
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID, version) {
     super(stationID);
     this.version = version;
+    currentDriverInstance = this;
     this.maxDays = MAX_DAYS;
     this.capabilities.meta.region = false;
     
@@ -351,6 +354,15 @@ var Driver = class Driver extends wxBase.Driver {
     return true;
   }
 
+  _getDayName(index) {
+    // Use the abbreviations that correspond to the keys in desklet.js's this.daynames
+    const dayNamesAbbr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const dayIndex = (currentDay + index) % 7;
+    return dayNamesAbbr[dayIndex]; // Returns the day abbreviation
+  }
+
   _mapIcon(icon, isNight) {
     const icons = {
       day: {
@@ -410,14 +422,21 @@ var Driver = class Driver extends wxBase.Driver {
 
   async _mapDescription(text) {
     const textMap = {
-      'Sandstorm'         : _('Sand Storm'),
-      'Light Rain Showers': _('Light Rain Shower'),
-      'Heavy Rain Showers': _('Heavy Rain Shower'),
-      'Sleet Showers'     : _('Sleet Shower'),
-      'Hail Showers'      : _('Hail Shower'),
-      'Thundery Showers'  : _('Thundery Shower')
+      'Sandstorm'         : 'Sand Storm',
+      'Light Rain Showers': 'Light Rain Shower',
+      'Heavy Rain Showers': 'Heavy Rain Shower',
+      'Sleet Showers'     : 'Sleet Shower',
+      'Hail Showers'      : 'Hail Shower',
+      'Thundery Showers'  : 'Thundery Shower'
     };
-    return text ? textMap[text] || _(text) : '';
+    if (!text) return '';
+    if (!textMap[text]) return '';
+    try {
+      return await _(textMap[text]);
+    } catch (err) {
+      global.logError(`Open-Meteo: Error translating description: ${e}`);  
+      return textMap[text];
+    }
   }
 
   async _tradutor(text) {
@@ -438,15 +457,17 @@ var Driver = class Driver extends wxBase.Driver {
 }
 
 async function _(str) {
-  try {
-    let driver;
-    if (!driver) driver = new Driver;
-    if (Gettext.dgettext(UUID, str) && Gettext.dgettext(UUID, str) !== str) return Gettext.dgettext(UUID, str);
-    if (Gettext.dgettext('cinnamon', str) && Gettext.dgettext('cinnamon', str) !== str) return Gettext.dgettext('cinnamon', str);
-    return await driver._tradutor(str) || str;
-  } catch (err) {
-    global.logError(`BBC Weather: error: ${err.message}`);
-    return str;
-  }
+    if (!str) return '';
+    try {
+      if (Gettext.dgettext(UUID, str) && Gettext.dgettext(UUID, str) !== str) return Gettext.dgettext(UUID, str);
+      if (Gettext.dgettext('cinnamon', str) && Gettext.dgettext('cinnamon', str) !== str) return Gettext.dgettext('cinnamon', str); 
+      if (currentDriverInstance) {
+        return await currentDriverInstance._tradutor(str);
+      }
+      return str;
+    } catch (err) {
+      global.logError(`Open-Meteo: Error in translate for "${str}": ${err.message}`);
+      return str;
+    }
 }
 
