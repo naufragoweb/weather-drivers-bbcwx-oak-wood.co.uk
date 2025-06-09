@@ -50,6 +50,40 @@
 
 --------------------------------------------------------------------------------
 
+Update 2025-06-09
+
+1. Inserting a language map for translation:
+
+    - Language map for unofficial Google Translation API (model 2022q2);
+
+2. Optimization of the forecast data parse function:
+
+    - Return to the original loop function to search for data on days;
+    - Modified the call to _getDayName to use the original function from wxbase.js;
+
+3. Modify local _getDayName;
+
+    - Modification of the function to adapt to the original wxbase.js loop when obtaining data from forecast objects;
+
+4. Modification to _mapDescription:
+
+    - Modified the text output for the _ function;
+    - Removed the call to the _ function directly in the text to be called only at the output of _mapDescription;
+
+5. Insertion of unofficial Google translation API;
+
+    - Modification of the _ function to add one more translation method:
+        * The script searches for a translation in the desklet's own translation system;
+        * If it doesn't find it, it searches in Cinnamon Desktop;
+        * If it doesn't find it, it searches in the Google translation API;
+        * If it returns an error, then it returns the original text;
+    - Modification in almost all error alerts that return in this.data.status.error so that the translation system works on them as well.
+    - Stores the current active driver instance (var Driver) to avoid creating multiple unnecessary instances.
+
+6. Small optimizations, cleaning and organization in the code;
+
+--------------------------------------------------------------------------------
+
 Update 2025-06-01
 
 1. Removed bug that displayed data when user input was null or wrong after already acquiring data:
