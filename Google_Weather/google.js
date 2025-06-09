@@ -13,10 +13,13 @@ const MAX_DAYS = 7;
 
 Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
 
+var currentDriverInstance = null;
+
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID, apikey, version) {
     super(stationID, apikey);
     this.version = version;
+    currentDriverInstance = this;
 
     this.capabilities.forecast.pressure = false;
     
@@ -278,7 +281,7 @@ var Driver = class Driver extends wxBase.Driver {
         humidity: current.relativeHumidity,
         pressure: parseInt(current.airPressure.meanSeaLevelMillibars),
         visibility: current.visibility.distance,
-        weathertext: await _(current.weatherCondition.description.text),
+        weathertext: current.weatherCondition.description.text,
         icon: this._mapIcon(current.weatherCondition.type, isDaytime),
         has_temp: true,
       });
@@ -298,7 +301,6 @@ var Driver = class Driver extends wxBase.Driver {
 
       for (let i = 0; i < forecasts.length; i++) {
         let dayorNightForecast = (i === 0 && isDaytime === false) ? forecasts[i].nighttimeForecast : forecasts[i].daytimeForecast;
-        const weatherText = await _(dayorNightForecast.weatherCondition.description.text);
 
         Object.assign(this.data.days[i], {
           day: this._getDayName(i),
@@ -306,7 +308,7 @@ var Driver = class Driver extends wxBase.Driver {
           minimum_temperature: forecasts[i].minTemperature.degrees,
           wind_speed: dayorNightForecast.wind.speed.value,
           wind_direction: this.compassDirection(dayorNightForecast.wind.direction.degrees),
-          weathertext: weatherText,
+          weathertext: dayorNightForecast.weatherCondition.description.text,
           icon: this._mapIcon(dayorNightForecast.weatherCondition.type, i === 0 ? isDaytime : true),
           humidity: dayorNightForecast.relativeHumidity
         });
@@ -414,14 +416,16 @@ var Driver = class Driver extends wxBase.Driver {
 }
 
 async function _(str) {
-  try {
-    let driver;
-    if (!driver) driver = new Driver;
-    if (Gettext.dgettext(UUID, str) && Gettext.dgettext(UUID, str) !== str) return Gettext.dgettext(UUID, str);
-    if (Gettext.dgettext('cinnamon', str) && Gettext.dgettext('cinnamon', str) !== str) return Gettext.dgettext('cinnamon', str);
-    return await driver._tradutor(str) || str;
-  } catch (err) {
-    global.logError(`BBC Weather: error: ${err.message}`);
-    return str;
-  }
+    if (!str) return '';
+    try {
+      if (Gettext.dgettext(UUID, str) && Gettext.dgettext(UUID, str) !== str) return Gettext.dgettext(UUID, str);
+      if (Gettext.dgettext('cinnamon', str) && Gettext.dgettext('cinnamon', str) !== str) return Gettext.dgettext('cinnamon', str); 
+      if (currentDriverInstance) {
+        return await currentDriverInstance._tradutor(str);
+      }
+      return str;
+    } catch (err) {
+      global.logError(`Open-Meteo: Error in translate for "${str}": ${err.message}`);
+      return str;
+    }
 }
