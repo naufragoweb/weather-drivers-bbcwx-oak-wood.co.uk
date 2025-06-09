@@ -1,12 +1,12 @@
 <div align="center">
 
-# BBCx Desklet Weather Forecast Scripts for Cinnamon Desktop
+# BBCwx Desklet Weather Forecast Scripts for Cinnamon Desktop
 
 </div>
 
 <div align="center">
 
-![BBCx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx1.png) 
+![BBCwx Desklet](https://github.com/naufragoweb/weather-drivers-bbcwx-oak-wood.co.uk/blob/main/%20Z-%20Images/bbcx1.png) 
 
 </div>
 
