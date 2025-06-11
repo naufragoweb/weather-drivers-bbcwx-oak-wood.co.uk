@@ -10,7 +10,7 @@ The National Weather Service APIs are REST APIs that use hypermedia as a form of
 
 In this model, URL chains need to be called one by one, which is a problem for the driver structure, since some APIs contain important data for calling another API, requiring data synchronicity.
 
-Another characteristic is the total lack of a standard in data distribution. Depending on the city and/or location, the data does not follow a pattern (for example, data every 1 hour, but when reading there is data every 6 hours, another with 2 hours between data, etc. The structure also differs between current, 1-hour, 12-hour and daily data, requiring changes in the way this data is called to assign it to the script objects.
+Another characteristic is the total lack of a standard in data distribution. Depending on the city and/or location, the data does not follow a pattern (for example, data every 1 hour, but when reading there is data every 6 hours, another with 2 hours between data, etc. The structure also differs between current, 1-hour, 12-hour and daily data, requiring changes in the way this data is called to assign it to the script objects).
 
 🧩 Technical Challenges Encountered;
 
@@ -57,6 +57,32 @@ Another characteristic is the total lack of a standard in data distribution. Dep
         ** Smooth transition between updates;
         
 --------------------------------------------------------------------------------
+# CHANGELOG:
+
+Update 2025-06-10
+
+1. Inserting a language map for translation:
+
+    - Language map for unofficial Google Translation API (model 2022q2);
+    - Inserted Promise.all for simultaneous translation by the _tradutor() function;
+
+2. Modification (optimization) to API loading functions:
+
+    - Removed _loadDataWithParams function;
+    - Modification to the _loadData function to accept URLs with and without parameters;
+
+3. Modification of verification of data received from APIs:
+    
+    - Verification of API data moved to _refreshData() (BUG in _loadData() when reading the NWS hypermedia-type API structure);
+
+4. Modification of the _mapDescription() function:
+
+    - Created list of NWS API phrases and terms according to official NWS documentation;
+    - Modification in the text output handling of the _mapDescription() function to correctly determine if the text exists in the textMap constant and forward the text to the translation function _ ;
+
+5. Code cleaning and standardization of error messages;
+
+---------------------------------------------------------------------------------
 
 Update 2025-06-01
 
