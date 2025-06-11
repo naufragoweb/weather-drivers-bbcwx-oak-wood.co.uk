@@ -52,6 +52,16 @@
 
 # CHANGELOG:
 
+Update 2025-06-10
+
+1. Improvements in _tradutor():
+
+    - Inserted Promise.all for simultaneous translation by the _tradutor() function;
+
+2. Code cleaning and standardization of error messages;
+
+----------------------------------------------------------------------------------
+
 Update 2025-06-09
 
 1. Inserting a language map for translation:
