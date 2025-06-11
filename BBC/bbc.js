@@ -262,7 +262,7 @@ var Driver = class Driver extends wxBase.Driver {
       if (URL.includes(this._baseURL)) return (json.observations || json.forecasts) ? json : false;
       if (URL.includes(this._languageURL)) return json[0] ? json : false;
     } catch (err) {
-      global.logError(`BBC: Error loading data ${API}: ${err.message}`);
+      global.logError(`BBC Weather: Error loading data ${API}: ${err.message}`);
       return false;
     }
   }  
@@ -273,7 +273,7 @@ var Driver = class Driver extends wxBase.Driver {
       this.data.status.meta = SERVICE_STATUS_OK;
       return true;
     } catch (err) {
-      global.logError(`BBC: Error parsing location from meta (locationID): ${err.message}`);
+      global.logError(`BBC Weather:: Error parsing location from meta (locationID): ${err.message}`);
       this.data.status.lasterror = await _('Failed to determine location ID from coordinates.');
       return false;
     }
@@ -289,7 +289,7 @@ var Driver = class Driver extends wxBase.Driver {
       })
       this.data.status.meta = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing meta data: ${err.message}`);
+      global.logError(`BBC Weather: Error parsing meta data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing location data:\n`) + err.message;
     }
@@ -317,7 +317,7 @@ var Driver = class Driver extends wxBase.Driver {
       });
       this.data.status.cc = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing current data: ${err.message}`);
+      global.logError(`BBC Weather: Error parsing current data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing current data:\n`) + err.message;
     }
@@ -348,7 +348,7 @@ var Driver = class Driver extends wxBase.Driver {
       };
       this.data.status.forecast = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing forecast data: ${err.message}`);
+      global.logError(`BBC Weather: Error parsing forecast data: ${err.message}`);
       this.data.status.forecast = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing forecast data:\n`) + err.message;
     }
@@ -431,27 +431,32 @@ var Driver = class Driver extends wxBase.Driver {
       'Thundery Showers'  : 'Thundery Shower'
     };
     if (!text) return '';
-    if (!textMap[text]) return '';
     try {
-      return await _(textMap[text]);
+      return (text in textMap) ? await _(textMap[text]) : await _(text);
     } catch (err) {
-      global.logError(`BBC Weather: Error translating description: ${e}`);  
-      return textMap[text];
+      global.logError(`BBC Weather: Error translating description: ${err.message}`);  
+      return (text in textMap) ? textMap[text] : text;
     }
   }
 
-  async _tradutor(text) {
+  async _tradutor(...texts) {
+    if (texts.length > 1) {
+      return Promise.all(texts.map(texts => this._tradutor(text)));
+    }
+    const text = texts[0];
     try {
+      const addText = `!The Weather Conditions are: ${text}`;
       const lineBreak = '(1)';
-      const cleanText = text.replace(/\n/g, lineBreak);
+      const cleanText = addText.replace(/\n/g, lineBreak);
       const query = encodeURIComponent(cleanText);
       const translate = await this._loadData(this._languageURL, 'translate', this._paramsTranslate(query));
       let textTranslate = translate[0][0][0].split(lineBreak).join('\n');
-      textTranslate = textTranslate.toLowerCase();
-      textTranslate = textTranslate.charAt(0).toUpperCase() + textTranslate.slice(1);
-      return textTranslate;
-    } catch (e) {
-      global.logError(`BBC Weather: Error translating "${text}": ${e}`);
+      let textTranslate1 = textTranslate.replace(/^!.*?:\s*/, '');
+      let textTranslate2 = textTranslate1.toLowerCase();
+      let textTranslate3 = textTranslate2.charAt(0).toUpperCase() + textTranslate2.slice(1);
+      return textTranslate3;
+    } catch (err) {
+      global.logError(`BBC Weather: Error translating "${text}": ${err.message}`);
       return text; // Fallback: return original text
     }
   }
