@@ -264,7 +264,7 @@ var Driver = class Driver extends wxBase.Driver {
       });
       this.data.status.meta = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing meta data: ${err.message}`);
+      global.logError(`Google Weather: Error parsing meta data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing location data:\n`) + err.message;
     }
@@ -289,7 +289,7 @@ var Driver = class Driver extends wxBase.Driver {
       });
       this.data.status.cc = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing current data: ${err.message}`);
+      global.logError(`Google Weather: Error parsing current data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing current data:\n`) + err.message;
     }
@@ -317,7 +317,7 @@ var Driver = class Driver extends wxBase.Driver {
       }
       this.data.status.forecast = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing forecast data: ${err.message}`);
+      global.logError(`Google Weather: Error parsing forecast data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing forecast data:\n`) + err.message;
     }
@@ -401,18 +401,24 @@ var Driver = class Driver extends wxBase.Driver {
       : icons.day[icon] || 'na';
   }
 
-  async _tradutor(text) {
+  async _tradutor(...texts) {
+    if (texts.length > 1) {
+      return Promise.all(texts.map(texts => this._tradutor(text)));
+    }
+    const text = texts[0];
     try {
+      const addText = `!The Weather Conditions are: ${text}`;
       const lineBreak = '(1)';
-      const cleanText = text.replace(/\n/g, lineBreak);
+      const cleanText = addText.replace(/\n/g, lineBreak);
       const query = encodeURIComponent(cleanText);
       const translate = await this._loadData(this._languageURL, 'translate', this._paramsTranslate(query));
       let textTranslate = translate[0][0][0].split(lineBreak).join('\n');
-      textTranslate = textTranslate.toLowerCase();
-      textTranslate = textTranslate.charAt(0).toUpperCase() + textTranslate.slice(1);
-      return textTranslate;
-    } catch (e) {
-      global.logError(`BBC Weather: Error translating "${text}": ${e}`);
+      let textTranslate1 = textTranslate.replace(/^!.*?:\s*/, '');
+      let textTranslate2 = textTranslate1.toLowerCase();
+      let textTranslate3 = textTranslate2.charAt(0).toUpperCase() + textTranslate2.slice(1);
+      return textTranslate3;
+    } catch (err) {
+      global.logError(`Google Weather: Error translating "${text}": ${err.message}`);
       return text; // Fallback: return original text
     }
   }
