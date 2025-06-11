@@ -60,6 +60,19 @@ for this:
 * In the near future I will change desklet.js and settings-schema.json and include the Google API.
 
 ----------------------------------------------------------------------------------
+
+# CHANGELOG:
+
+Update 2025-06-10
+
+1. Improvements in _tradutor():
+
+    - Inserted Promise.all for simultaneous translation by the _tradutor() function;
+
+2. Code cleaning and standardization of error messages;
+
+----------------------------------------------------------------------------------
+
 # CHANGELOG:
 
 Update 2025-06-09
@@ -78,17 +91,6 @@ Update 2025-06-09
 4. Insert new specific type of icon type (TYPE UNSPECIFIED) in _mapIcon;
 
 5. Rename _loadDataWithParams() to _loadData();
-
-----------------------------------------------------------------------------------
-# CHANGELOG:
-
-Update 2025-06-10
-
-1. Improvements in _tradutor():
-
-    - Inserted Promise.all for simultaneous translation by the _tradutor() function;
-
-2. Code cleaning and standardization of error messages;
 
 ----------------------------------------------------------------------------------
 
