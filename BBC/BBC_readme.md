@@ -73,6 +73,20 @@ The BBCwx Weather Service uses 3 complementary APIs:
 
 # CHANGELOG:
 
+Update 2025-06-10
+
+1. Improvements in _tradutor():
+
+    - Inserted Promise.all for simultaneous translation by the _tradutor() function;
+
+2. Modification of the _mapDescription() function:
+
+    - Modification in the text output handling of the _mapDescription() function to correctly determine if the text exists in the textMap constant and forward the text to the translation function _ ;
+
+3. Code cleaning and standardization of error messages;
+
+---------------------------------------------------------------------------------
+
 Update 2025-06-09
 
 1. Improvements in function _():
