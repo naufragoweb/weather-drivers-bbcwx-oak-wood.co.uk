@@ -13,13 +13,13 @@ const MAX_DAYS = 7;
 
 Gettext.bindtextdomain(UUID, GLib.get_home_dir() + '/.local/share/locale');
 
-var currentDriverInstance = null; // Variável global para armazenar a instância
+var currentDriverInstance = null;
 
 var Driver = class Driver extends wxBase.Driver {
   constructor(stationID, version) {
     super(stationID);
     this.version = version;
-    currentDriverInstance = this; // Atualiza a instância global ao criar
+    currentDriverInstance = this;
     
     this.capabilities.cc.visibility = false;
 
@@ -250,7 +250,7 @@ var Driver = class Driver extends wxBase.Driver {
       this.latitude = forecast.latitude;
       this.longitude = forecast.longitude;
     } catch (err) {
-      global.logError(`Error parsing location data: ${err.message}`);
+      global.logError(`Open-Meteo: Error parsing location data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing lat,lon\nin forecast data:\n`) + err.message;
     }
@@ -266,7 +266,7 @@ var Driver = class Driver extends wxBase.Driver {
       });
       this.data.status.meta = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing meta data: ${err.message}`);
+      global.logError(`Open-Meteo: Error parsing meta data: ${err.message}`);
       this.data.status.meta = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing location data:\n`) + err.message;
     }
@@ -290,7 +290,7 @@ var Driver = class Driver extends wxBase.Driver {
       });
       this.data.status.cc = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing current data: ${err.message}`);
+      global.logError(`Open-Meteo: Error parsing current data: ${err.message}`);
       this.data.status.cc = SERVICE_STATUS_ERROR;
       this.data.status.lasterror = await _(`Error processing current data:\n`) + err.message;
     }
@@ -316,7 +316,7 @@ var Driver = class Driver extends wxBase.Driver {
       }
       this.data.status.forecast = SERVICE_STATUS_OK;
     } catch (err) {
-      global.logError(`Error parsing forecast data: ${err.message}`);
+      global.logError(`Open-Meteo: Error parsing forecast data: ${err.message}`);
       this.data.status.lasterror = await _(`Error processing forecast data:\n`) + err.message;
       return false;
     }
@@ -415,23 +415,29 @@ var Driver = class Driver extends wxBase.Driver {
     try {
       return await _(textMap[text]);
     } catch (err) {
-      global.logError(`Open-Meteo: Error translating description: ${e}`);  
+      global.logError(`Open-Meteo: Error translating description: ${err.message}`);  
       return textMap[text];
     }
   }
 
-  async _tradutor(text) {
+  async _tradutor(...texts) {
+    if (texts.length > 1) {
+      return Promise.all(texts.map(texts => this._tradutor(text)));
+    }
+    const text = texts[0];
     try {
+      const addText = `!The Weather Conditions are: ${text}`;
       const lineBreak = '(1)';
-      const cleanText = text.replace(/\n/g, lineBreak);
+      const cleanText = addText.replace(/\n/g, lineBreak);
       const query = encodeURIComponent(cleanText);
       const translate = await this._loadData(this._languageURL, 'translate', this._paramsTranslate(query));
       let textTranslate = translate[0][0][0].split(lineBreak).join('\n');
-      textTranslate = textTranslate.toLowerCase();
-      textTranslate = textTranslate.charAt(0).toUpperCase() + textTranslate.slice(1);
-      return textTranslate;
-    } catch (e) {
-      global.logError(`Open-Meteo: Error translating "${text}": ${e}`);
+      let textTranslate1 = textTranslate.replace(/^!.*?:\s*/, '');
+      let textTranslate2 = textTranslate1.toLowerCase();
+      let textTranslate3 = textTranslate2.charAt(0).toUpperCase() + textTranslate2.slice(1);
+      return textTranslate3;
+    } catch (err) {
+      global.logError(`Open-Meteo: Error translating "${text}": ${err.message}`);
       return text; // Fallback: return original text
     }
   }
@@ -441,14 +447,12 @@ var Driver = class Driver extends wxBase.Driver {
 async function _(str) {
     if (!str) return '';
     try {
-      let driver;
-      if (!driver) driver = new Driver;
       if (Gettext.dgettext(UUID, str) && Gettext.dgettext(UUID, str) !== str) return Gettext.dgettext(UUID, str);
       if (Gettext.dgettext('cinnamon', str) && Gettext.dgettext('cinnamon', str) !== str) return Gettext.dgettext('cinnamon', str); 
       if (currentDriverInstance) {
-            return await currentDriverInstance._tradutor(str) || str;
-        }
-        return str;
+        return await currentDriverInstance._tradutor(str);
+      }
+      return str;
     } catch (err) {
       global.logError(`Open-Meteo: Error in translate for "${str}": ${err.message}`);
       return str;
