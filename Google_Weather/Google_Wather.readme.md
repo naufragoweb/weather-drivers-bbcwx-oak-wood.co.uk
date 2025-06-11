@@ -80,6 +80,17 @@ Update 2025-06-09
 5. Rename _loadDataWithParams() to _loadData();
 
 ----------------------------------------------------------------------------------
+# CHANGELOG:
+
+Update 2025-06-10
+
+1. Improvements in _tradutor():
+
+    - Inserted Promise.all for simultaneous translation by the _tradutor() function;
+
+2. Code cleaning and standardization of error messages;
+
+----------------------------------------------------------------------------------
 
 Update 2025-06-08
 
